@@ -103,7 +103,3 @@ export default function Page() {
     </div>
   </div>
 }
-
-function _Unused() { return <div aria-hidden="true" className="hidden"><Search /></div> }
-
-export { _Unused }
