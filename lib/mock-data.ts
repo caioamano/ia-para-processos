@@ -2,6 +2,7 @@
 // Na Fase 4 (Supabase) este arquivo deixa de ser usado, e as telas passam a
 // buscar os mesmos dados no banco. Nunca coloque processos reais aqui.
 
+import { PROCESS_STATUSES, PROCESS_TYPES } from './types'
 import type { CurrentUser, Deadline, Office, Process } from './types'
 
 export const office: Office = {
@@ -17,7 +18,7 @@ export const currentUser: CurrentUser = {
   role: 'Administrador',
 }
 
-export const processes: Process[] = [
+const featuredProcesses: Process[] = [
   {
     id: 'proc-1',
     officeId: office.id,
@@ -68,6 +69,66 @@ export const processes: Process[] = [
     status: 'Em andamento',
     updatedAt: '14 set. 2026',
   },
+]
+
+
+// Gera processos fictícios para a lista ter volume suficiente (paginação, filtros).
+// Não usa números aleatórios: o resultado é sempre o mesmo, o que evita diferenças
+// entre o que o servidor e o navegador desenham.
+const clientNames = [
+  'Padaria Santa Clara Ltda.',
+  'Marcos Vinícius Prado',
+  'Transportes Rota Sul S.A.',
+  'Helena Duarte Carvalho',
+  'Clínica Vida Plena',
+  'Oficina Mecânica Ferraz',
+  'Beatriz Lima Montenegro',
+  'Distribuidora Alvorada Ltda.',
+  'João Pedro Sampaio',
+  'Escola Novo Horizonte',
+  'Fernanda Albuquerque',
+  'Indústria Metalúrgica Brasil',
+  'Condomínio Residencial Aurora',
+  'Ricardo Teixeira Neto',
+  'Farmácia Bom Remédio Ltda.',
+  'Luciana Ferreira Souza',
+]
+
+const responsibles = ['Caio Henrique', 'Ana Beatriz', 'Lucas Mendes']
+
+const monthLabels = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.']
+
+function formatDate(date: Date) {
+  return `${date.getUTCDate()} ${monthLabels[date.getUTCMonth()]} ${date.getUTCFullYear()}`
+}
+
+function generateProcesses(count: number, firstNumber: number): Process[] {
+  return Array.from({ length: count }, (_, index) => {
+    const n = firstNumber + index
+    const type = PROCESS_TYPES[(n * 7) % PROCESS_TYPES.length]
+    const sequence = String(1000000 + ((n * 48271) % 8999999))
+    const digits = String(10 + ((n * 17) % 90))
+    const year = 2022 + (n % 5)
+    const court = type === 'Trabalhista' ? '5.09.0010' : n % 2 === 0 ? '8.16.0001' : '8.26.0100'
+    const date = new Date(Date.UTC(2026, 8, 13 - Math.floor(index * 0.9)))
+
+    return {
+      id: `proc-${n}`,
+      officeId: office.id,
+      number: `${sequence}-${digits}.${year}.${court}`,
+      client: clientNames[(n * 3) % clientNames.length],
+      type,
+      responsible: responsibles[n % responsibles.length],
+      status: PROCESS_STATUSES[(n * 5) % PROCESS_STATUSES.length],
+      updatedAt: formatDate(date),
+    }
+  })
+}
+
+// 5 processos "de destaque" (os do dashboard) + 123 gerados = 128 no total.
+export const processes: Process[] = [
+  ...featuredProcesses,
+  ...generateProcesses(123, featuredProcesses.length + 1),
 ]
 
 export const deadlines: Deadline[] = [
