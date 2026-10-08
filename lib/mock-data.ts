@@ -2,6 +2,7 @@
 // Na Fase 4 (Supabase) este arquivo deixa de ser usado, e as telas passam a
 // buscar os mesmos dados no banco. Nunca coloque processos reais aqui.
 
+import { formatDate } from './format'
 import { PROCESS_STATUSES, PROCESS_TYPES } from './types'
 import type { CurrentUser, Deadline, Office, Process } from './types'
 
@@ -95,12 +96,6 @@ const clientNames = [
 ]
 
 const responsibles = ['Caio Henrique', 'Ana Beatriz', 'Lucas Mendes']
-
-const monthLabels = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.']
-
-function formatDate(date: Date) {
-  return `${date.getUTCDate()} ${monthLabels[date.getUTCMonth()]} ${date.getUTCFullYear()}`
-}
 
 function generateProcesses(count: number, firstNumber: number): Process[] {
   return Array.from({ length: count }, (_, index) => {

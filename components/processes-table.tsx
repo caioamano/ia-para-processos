@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { MoreHorizontal } from 'lucide-react'
 
 import { StatusBadge } from '@/components/status-badge'
@@ -26,7 +27,11 @@ export function ProcessesTable({ processes }: { processes: Process[] }) {
               key={process.id}
               className="border-b border-line text-[13px] last:border-0 hover:bg-muted"
             >
-              <td className="px-5 py-4 font-medium text-link">{process.number}</td>
+              <td className="px-5 py-4 font-medium">
+                <Link href={`/processos/${process.id}`} className="text-link hover:underline">
+                  {process.number}
+                </Link>
+              </td>
               <td className="px-4 py-4 text-foreground">{process.client}</td>
               <td className="px-4 py-4 text-muted-foreground">{process.type}</td>
               <td className="px-4 py-4 text-muted-foreground">{process.responsible}</td>

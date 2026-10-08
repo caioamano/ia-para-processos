@@ -45,3 +45,58 @@ export interface Deadline {
   when: string
   tone: DeadlineTone
 }
+
+// ---------- Tela de Processo individual ----------
+
+// De onde saiu uma informação: documento + página. É o coração da confiança no produto:
+// o advogado sempre consegue conferir a origem.
+export interface SourceReference {
+  document: string
+  page: number
+}
+
+export interface ProcessDetails {
+  court: string
+  caseValue: string
+  distributedAt: string
+  counterparty: string
+}
+
+export type DocumentStatus = 'Analisado' | 'Em processamento' | 'Pendente'
+
+export interface ProcessDocument {
+  id: string
+  officeId: string
+  processId: string
+  name: string
+  fileName: string
+  pages: number
+  size: string
+  uploadedAt: string
+  status: DocumentStatus
+}
+
+export interface TimelineEvent {
+  id: string
+  date: string
+  title: string
+  description: string
+}
+
+export interface AnalysisItem {
+  label: string
+  value: string
+  source: SourceReference
+}
+
+export interface AnalysisSection {
+  id: string
+  title: string
+  items: AnalysisItem[]
+}
+
+export interface ConversationTurn {
+  question: string
+  answer: string
+  source: SourceReference
+}
