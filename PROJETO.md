@@ -25,6 +25,16 @@ Como ajudar:
 
 O fluxo de trabalho de Caio é: receber os arquivos, subir pelo GitHub ("Add files via upload"), e a Vercel publica sozinha. Entregue arquivos prontos e diga o que substituir/apagar. Quando uma troca depender de ordem (ex.: trocar um arquivo antes de apagar outro), avise.
 
+### Regra de continuidade (obrigatória)
+
+Toda vez que o trabalho avançar, quem estiver ajudando deve, **antes de encerrar a resposta**:
+
+1. **Entregar o `PROJETO.md` atualizado** (seções 6 e 7: quadro de fases, "Estado atual", decisões tomadas e próximos passos) junto com os demais arquivos.
+2. Dizer a Caio, em lista curta e numerada, **o que ele precisa fazer para continuar** (arquivos a subir, o que apagar, o que configurar no Supabase/Vercel e o que responder no próximo chat).
+3. Lembrar que o `PROJETO.md` novo substitui o antigo na raiz do repositório.
+
+Se o arquivo não for atualizado, a próxima conversa começa com informação velha.
+
 ---
 
 ## 2. O produto
