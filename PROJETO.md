@@ -121,8 +121,8 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 | 1 | Interface e design | Concluída |
 | 2 | GitHub | Concluída |
 | 3 | Vercel | Concluída |
-| 4 | Supabase (projeto, tabelas com `office_id`, RLS, dados fictícios) | **Em andamento** (SQL pronto e testado; falta rodar no Supabase) |
-| 5 | Autenticação (e telas passam a ler do banco) | Pendente |
+| 4 | Supabase (projeto, tabelas com `office_id`, RLS, dados fictícios) | Concluída |
+| 5 | Autenticação (e telas passam a ler do banco) | **Em andamento** |
 | 6 | Multi-tenancy (validação do isolamento com RLS) | Pendente |
 | 7 | Cadastro de processos | Pendente |
 | 8 | Upload de documentos | Pendente |
@@ -141,36 +141,33 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 **Atualizado em: 08/10/2026**
 
-- Interface completa com **dados fictícios** (Visão geral, Processos, Processo individual, Documentos, Análises, Equipe, Configurações). As telas ainda leem de `lib/mock-*.ts`.
+- Interface completa com **dados fictícios**. As telas ainda leem de `lib/mock-*.ts`.
 - A raiz do site (`/`) redireciona para `/dashboard`. A pasta `components/landing/` ficou sem uso e pode ser apagada.
-- **Projeto Supabase `lexia` criado** (região São Paulo) por Caio.
-- **Fase 4: os 3 arquivos SQL estão prontos e foram testados** num PostgreSQL local que imita o Supabase. Ficam na pasta `supabase/` do repositório:
-  - `01_schema.sql`: tabelas, chaves compostas, funções auxiliares e políticas RLS (24 políticas).
-  - `02_dados_ficticios.sql`: escritório Silva & Associados com os mesmos dados do site (128 processos, 768 documentos, 640 movimentações, 128 análises, 1152 itens de análise, 256 consultas, 3 prazos, 5 pessoas). Pode ser rodado de novo sem duplicar.
-  - `03_teste_isolamento.sql`: cria um segundo escritório de teste, tenta acessar dados cruzados com cada função (Administrador, Advogado, Estagiário, outro escritório, sem escritório, visitante) e apaga o que criou. **24 testes passaram** localmente; ao desligar o RLS de propósito, 10 falharam (o teste detecta o problema).
-- **Ainda não executado no Supabase real.** Falta Caio rodar os 3 arquivos no SQL Editor e conferir os resultados.
+- **Fase 4 concluída e conferida no Supabase real:** projeto `lexia` (região São Paulo) com as 9 tabelas, RLS ligado, dados fictícios carregados (128 processos, 768 documentos, 640 movimentações, 128 análises, 1152 itens de análise, 256 consultas, 3 prazos, 5 pessoas) e os 24 testes de isolamento com ✅ OK. Os arquivos estão em `supabase/` (`01_schema.sql`, `02_dados_ficticios.sql`, `03_teste_isolamento.sql`).
+- **Fase 5 em andamento** (ainda sem código novo): Caio precisa criar o próprio usuário no Supabase Auth e pegar a URL e a chave pública do projeto.
 
 ### Decisões tomadas
 
 - **RLS ligado desde o início**, com políticas já escritas. As telas só passam a ler do banco na Fase 5 (com login), porque o RLS depende de saber quem está logado (`auth.uid()`).
-- **Nunca usar `service_role` como atalho** para ligar o site ao banco.
-- **`profiles` separado de `auth.users`:** a tabela `profiles` guarda escritório e função. A coluna `auth_user_id` fica vazia até a pessoa criar conta (é o caso do "Convite pendente"). Na Fase 5, ao criar conta, vincula-se `auth_user_id` ao perfil.
-- **Chaves compostas `(id, office_id)`:** toda ligação entre tabelas (documento→processo, análise→processo, consulta→documento etc.) também confere o escritório. Assim é impossível ligar, por erro de código, um dado da Silva a um dado de outro escritório.
-- **Funções auxiliares no schema `private`** (`current_office_id`, `current_profile_id`, `current_role_name`), com `security definer`, para não ficarem expostas na API.
-- **Status, tipos e funções guardados como texto** com `check` (os mesmos textos das telas: "Em andamento", "Cível", "Advogado"...). Simples agora; pode virar enum/código em inglês depois.
+- **Nunca usar `service_role` como atalho** para ligar o site ao banco. Nunca colocar essa chave no código, no GitHub ou em chats.
+- **`profiles` separado de `auth.users`:** `profiles` guarda escritório e função. `auth_user_id` fica vazio até a pessoa criar conta ("Convite pendente"). Ao criar conta, vincula-se `auth_user_id` ao perfil.
+- **Chaves compostas `(id, office_id)`:** toda ligação entre tabelas também confere o escritório.
+- **Funções auxiliares no schema `private`** (`current_office_id`, `current_profile_id`, `current_role_name`), com `security definer`.
+- **Status, tipos e funções como texto** com `check` (os mesmos textos das telas). Pode virar enum depois.
 - **Permissões (RLS):** todos veem o escritório; todos enviam documentos e registram consultas (só em nome próprio); Administrador e Advogado cadastram/editam processos e análises; só o Administrador gerencia equipe e configurações.
-- `anon` (visitante sem login) não tem acesso a nenhuma tabela. Tabelas novas criadas depois precisam repetir os `grant` do fim da seção de segurança do `01_schema.sql`.
+- `anon` (visitante sem login) não acessa nenhuma tabela. Tabelas novas precisam repetir os `grant` do fim da seção de segurança do `01_schema.sql`.
 
-### Tabelas
+### Plano da Fase 5 (em duas partes)
 
-`offices`, `profiles`, `processes`, `documents` (com `storage_path` para a Fase 8), `process_events`, `analyses`, `analysis_items` (cada item com documento e página de origem), `consultations`, `deadlines`.
+- **5A, login:** instalar `@supabase/supabase-js` e `@supabase/ssr`; variáveis de ambiente `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` (local e Vercel); página `/login`; proteção das rotas do painel (quem não está logado vai para `/login`); botão Sair; vincular o login de Caio ao perfil `Caio Henrique`.
+- **5B, dados reais:** trocar `lib/mock-*.ts` por consultas ao Supabase, tela por tela (começando por Processos), usando o usuário logado para que o RLS filtre sozinho. Os mocks só são apagados depois que todas as telas migrarem.
 
 ### Próximos passos
 
-1. Caio sobe a pasta `supabase/` no GitHub (os 3 arquivos `.sql`) e o `PROJETO.md` atualizado.
-2. Caio roda no Supabase (SQL Editor), nesta ordem: `01_schema.sql`, `02_dados_ficticios.sql`, `03_teste_isolamento.sql`.
-3. Caio confere: o 02 mostra 128 / 768 / 640 / 128 / 1152 / 256 / 3 / 5; o 03 mostra 24 linhas com ✅ OK. Se algo falhar, avisar com o texto do erro.
-4. **Fase 5:** autenticação (Supabase Auth), vincular o login de Caio ao perfil `Caio Henrique`, e trocar `lib/mock-*.ts` por consultas ao banco. Vai exigir a URL do projeto e a chave `anon` (nunca a `service_role`) nas variáveis de ambiente da Vercel.
+1. Caio cria o próprio usuário no Supabase (Authentication → Users → Add user, com e-mail e senha reais e "Auto Confirm User" marcado).
+2. Caio roda o SQL de vínculo que a Claude passar (liga esse login ao perfil `Caio Henrique`).
+3. Caio pega a **Project URL** e a chave pública (**anon / publishable**) em Project Settings → API e informa a Claude. A `service_role`/secret **nunca**.
+4. Claude entrega o código da 5A (login e proteção das rotas).
 
 ---
 
