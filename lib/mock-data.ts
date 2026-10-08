@@ -114,7 +114,8 @@ function generateProcesses(count: number, firstNumber: number): Process[] {
       client: clientNames[(n * 3) % clientNames.length],
       type,
       responsible: responsibles[n % responsibles.length],
-      status: PROCESS_STATUSES[(n * 5) % PROCESS_STATUSES.length],
+      // O deslocamento (Math.floor(n / 4)) evita que o status ande sempre junto com o tipo.
+      status: PROCESS_STATUSES[(n * 5 + Math.floor(n / 4)) % PROCESS_STATUSES.length],
       updatedAt: formatDate(date),
     }
   })
