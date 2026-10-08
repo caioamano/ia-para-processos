@@ -62,7 +62,8 @@ export interface ProcessDetails {
   counterparty: string
 }
 
-export type DocumentStatus = 'Analisado' | 'Em processamento' | 'Pendente'
+export const DOCUMENT_STATUSES = ['Analisado', 'Em processamento', 'Pendente'] as const
+export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number]
 
 export interface ProcessDocument {
   id: string
@@ -99,4 +100,46 @@ export interface ConversationTurn {
   question: string
   answer: string
   source: SourceReference
+}
+
+// ---------- Telas de Documentos, Análises, Equipe ----------
+
+// Um documento visto de fora do processo: precisa saber a qual processo e cliente pertence.
+export interface OfficeDocument extends ProcessDocument {
+  processNumber: string
+  client: string
+}
+
+export const ANALYSIS_STATUSES = ['Concluída', 'Em processamento', 'Pendente'] as const
+export type AnalysisStatus = (typeof ANALYSIS_STATUSES)[number]
+
+export interface AnalysisOverview {
+  processId: string
+  number: string
+  client: string
+  type: ProcessType
+  analyzedDocuments: number
+  totalDocuments: number
+  status: AnalysisStatus
+  updatedAt: string
+}
+
+export const ROLES = ['Administrador', 'Advogado', 'Estagiário'] as const
+export type Role = (typeof ROLES)[number]
+
+export type MemberStatus = 'Ativo' | 'Convite pendente'
+
+export interface TeamMember {
+  id: string
+  officeId: string
+  name: string
+  email: string
+  role: Role
+  status: MemberStatus
+  lastAccess: string
+}
+
+export interface Permission {
+  label: string
+  roles: Role[]
 }

@@ -1,11 +1,5 @@
-import type { DocumentStatus, ProcessDocument } from '@/lib/types'
-
-// Reaproveita as cores de status criadas no globals.css.
-const statusStyles: Record<DocumentStatus, string> = {
-  Analisado: 'bg-status-progress-bg text-status-progress',
-  'Em processamento': 'bg-status-review-bg text-status-review',
-  Pendente: 'bg-status-pending-bg text-status-pending',
-}
+import { DocumentStatusBadge } from '@/components/document-status-badge'
+import type { ProcessDocument } from '@/lib/types'
 
 export function DocumentsPanel({ documents }: { documents: ProcessDocument[] }) {
   return (
@@ -32,9 +26,7 @@ export function DocumentsPanel({ documents }: { documents: ProcessDocument[] }) 
                 <td className="px-4 py-4 text-muted-foreground">{document.size}</td>
                 <td className="px-4 py-4 text-subtle">{document.uploadedAt}</td>
                 <td className="px-4 py-4">
-                  <span className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${statusStyles[document.status]}`}>
-                    {document.status}
-                  </span>
+                  <DocumentStatusBadge status={document.status} />
                 </td>
               </tr>
             ))}

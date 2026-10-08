@@ -5,11 +5,16 @@
 import { formatCurrency, formatDate } from './format'
 import { office, processes } from './mock-data'
 import type {
+  AnalysisOverview,
   AnalysisSection,
+  AnalysisStatus,
   ConversationTurn,
+  DocumentStatus,
+  OfficeDocument,
   Process,
   ProcessDetails,
   ProcessDocument,
+  ProcessStatus,
   TimelineEvent,
 } from './types'
 
@@ -59,17 +64,25 @@ export function getProcessDetails(process: Process): ProcessDetails {
   }
 }
 
+// Quanto da análise já foi feito depende da situação do processo (6 documentos por processo).
+const documentStatusPatterns: Record<ProcessStatus, DocumentStatus[]> = {
+  Concluído: ['Analisado', 'Analisado', 'Analisado', 'Analisado', 'Analisado', 'Analisado'],
+  'Em andamento': ['Analisado', 'Analisado', 'Analisado', 'Analisado', 'Analisado', 'Em processamento'],
+  'Em análise': ['Analisado', 'Analisado', 'Analisado', 'Em processamento', 'Em processamento', 'Pendente'],
+  Pendente: ['Analisado', 'Analisado', 'Pendente', 'Pendente', 'Pendente', 'Pendente'],
+}
+
 export function getDocuments(process: Process): ProcessDocument[] {
   const seed = seedOf(process)
   const base = baseDateOf(seed)
 
-  const templates: Array<Pick<ProcessDocument, 'name' | 'fileName' | 'status'> & { pages: number; daysAgo: number }> = [
-    { name: 'Petição Inicial', fileName: 'peticao-inicial.pdf', pages: 14 + (seed % 9), daysAgo: 70, status: 'Analisado' },
-    { name: 'Procuração', fileName: 'procuracao.pdf', pages: 2, daysAgo: 70, status: 'Analisado' },
-    { name: 'Contestação', fileName: 'contestacao.pdf', pages: 18 + (seed % 7), daysAgo: 9, status: 'Analisado' },
-    { name: 'Despacho', fileName: 'despacho.pdf', pages: 2, daysAgo: 0, status: 'Analisado' },
-    { name: 'Decisão interlocutória', fileName: 'decisao-interlocutoria.pdf', pages: 5 + (seed % 3), daysAgo: 41, status: 'Em processamento' },
-    { name: 'Documentos anexos', fileName: 'documentos-anexos.pdf', pages: 38 + (seed % 20), daysAgo: 70, status: 'Pendente' },
+  const templates: Array<Pick<ProcessDocument, 'name' | 'fileName'> & { pages: number; daysAgo: number }> = [
+    { name: 'Petição Inicial', fileName: 'peticao-inicial.pdf', pages: 14 + (seed % 9), daysAgo: 70 },
+    { name: 'Procuração', fileName: 'procuracao.pdf', pages: 2, daysAgo: 70 },
+    { name: 'Contestação', fileName: 'contestacao.pdf', pages: 18 + (seed % 7), daysAgo: 9 },
+    { name: 'Despacho', fileName: 'despacho.pdf', pages: 2, daysAgo: 0 },
+    { name: 'Decisão interlocutória', fileName: 'decisao-interlocutoria.pdf', pages: 5 + (seed % 3), daysAgo: 41 },
+    { name: 'Documentos anexos', fileName: 'documentos-anexos.pdf', pages: 38 + (seed % 20), daysAgo: 70 },
   ]
 
   return templates.map((template, index) => ({
@@ -81,7 +94,7 @@ export function getDocuments(process: Process): ProcessDocument[] {
     pages: template.pages,
     size: `${(template.pages * 0.12).toFixed(1).replace('.', ',')} MB`,
     uploadedAt: formatDate(daysBefore(base, template.daysAgo)),
-    status: template.status,
+    status: documentStatusPatterns[process.status][index],
   }))
 }
 
@@ -200,4 +213,43 @@ export function getConversation(process: Process): ConversationTurn[] {
       source: { document: 'Despacho', page: 1 },
     },
   ]
+}
+
+// Todos os documentos do escritório (a tela "Documentos").
+// Também filtra pelo escritório logado: na Fase 6 isso passa a ser garantido pelo banco (RLS).
+export function getAllDocuments(): OfficeDocument[] {
+  return processes
+    .filter((process) => process.officeId === office.id)
+    .flatMap((process) =>
+      getDocuments(process).map((document) => ({
+        ...document,
+        processNumber: process.number,
+        client: process.client,
+      })),
+    )
+}
+
+// Situação da análise de cada processo (a tela "Análises").
+export function getAnalysisOverview(): AnalysisOverview[] {
+  return processes
+    .filter((process) => process.officeId === office.id)
+    .map((process) => {
+      const documents = getDocuments(process)
+      const analyzed = documents.filter((document) => document.status === 'Analisado').length
+
+      let status: AnalysisStatus = 'Pendente'
+      if (analyzed === documents.length) status = 'Concluída'
+      else if (documents.some((document) => document.status === 'Em processamento')) status = 'Em processamento'
+
+      return {
+        processId: process.id,
+        number: process.number,
+        client: process.client,
+        type: process.type,
+        analyzedDocuments: analyzed,
+        totalDocuments: documents.length,
+        status,
+        updatedAt: process.updatedAt,
+      }
+    })
 }

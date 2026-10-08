@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Upload } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 
 import { DemoNotice } from '@/components/demo-notice'
 import { PageHeader } from '@/components/page-header'
@@ -12,6 +12,7 @@ import { QueryPanel } from '@/components/process/query-panel'
 import { SummaryPanel } from '@/components/process/summary-panel'
 import { StatusBadge } from '@/components/status-badge'
 import { Tabs } from '@/components/tabs'
+import { UploadDocumentButton } from '@/components/upload-document-button'
 import {
   getAnalysis,
   getConversation,
@@ -59,9 +60,7 @@ export default async function ProcessPage({ params }: ProcessPageProps) {
           action={
             <div className="flex items-center gap-3">
               <StatusBadge status={currentProcess.status} />
-              <button className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-input bg-card px-3.5 text-xs font-medium text-primary transition-colors hover:bg-accent">
-                <Upload className="size-4" /> Enviar documento
-              </button>
+              <UploadDocumentButton />
             </div>
           }
         />
