@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'LexIA',
+  title: { default: 'LexIA', template: '%s · LexIA' },
   description: 'Organize, analise e consulte processos jurídicos com mais rapidez.',
   icons: {
     icon: [
