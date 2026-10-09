@@ -122,7 +122,7 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 | 2 | GitHub | Concluída |
 | 3 | Vercel | Concluída |
 | 4 | Supabase (projeto, tabelas com `office_id`, RLS, dados fictícios) | Concluída |
-| 5 | Autenticação (e telas passam a ler do banco) | **Em andamento** |
+| 5 | Autenticação (e telas passam a ler do banco) | **Em andamento** (5A: código entregue, falta configurar e testar; 5B pendente) |
 | 6 | Multi-tenancy (validação do isolamento com RLS) | Pendente |
 | 7 | Cadastro de processos | Pendente |
 | 8 | Upload de documentos | Pendente |
@@ -139,12 +139,14 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 ## 7. Estado atual
 
-**Atualizado em: 08/10/2026**
+**Atualizado em: 08/10/2026 (Fase 5A entregue)**
 
 - Interface completa com **dados fictícios**. As telas ainda leem de `lib/mock-*.ts`.
 - A raiz do site (`/`) redireciona para `/dashboard`. A pasta `components/landing/` ficou sem uso e pode ser apagada.
 - **Fase 4 concluída e conferida no Supabase real:** projeto `lexia` (região São Paulo) com as 9 tabelas, RLS ligado, dados fictícios carregados (128 processos, 768 documentos, 640 movimentações, 128 análises, 1152 itens de análise, 256 consultas, 3 prazos, 5 pessoas) e os 24 testes de isolamento com ✅ OK. Os arquivos estão em `supabase/` (`01_schema.sql`, `02_dados_ficticios.sql`, `03_teste_isolamento.sql`).
-- **Fase 5 em andamento** (ainda sem código novo): Caio precisa criar o próprio usuário no Supabase Auth e pegar a URL e a chave pública do projeto.
+- **Fase 5A (login): código entregue em 08/10/2026**, ainda não testado em produção. Inclui `proxy.ts` (protege as rotas), página `/login`, botão Sair no menu lateral e os clientes do Supabase em `lib/supabase/`. O `package.json` e o `pnpm-lock.yaml` ganharam `@supabase/supabase-js` e `@supabase/ssr`. As telas do painel **ainda leem os dados fictícios** (isso é a 5B).
+- Variáveis de ambiente usadas: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (chave pública `sb_publishable_...`). Elas ficam **só na Vercel** (Settings → Environment Variables), nunca no GitHub. Sem elas o site responde erro 500 de propósito (fecha em vez de abrir sem proteção).
+- Pendência de organização: a pasta do SQL no GitHub está com o nome `superbase` (com "r"); o correto é `supabase`.
 
 ### Decisões tomadas
 
@@ -157,6 +159,10 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 - **Permissões (RLS):** todos veem o escritório; todos enviam documentos e registram consultas (só em nome próprio); Administrador e Advogado cadastram/editam processos e análises; só o Administrador gerencia equipe e configurações.
 - `anon` (visitante sem login) não acessa nenhuma tabela. Tabelas novas precisam repetir os `grant` do fim da seção de segurança do `01_schema.sql`.
 
+- **Next.js 16 usa `proxy.ts`** (na raiz) no lugar do antigo `middleware.ts`. Ele usa `getClaims()` (confere a assinatura do login) e nunca `getSession()` para decidir acesso.
+- **Login por e-mail e senha** (`signInWithPassword`), sem cadastro público: contas são criadas pelo painel do Supabase/convite.
+- A chave `sb_publishable_...` é pública por desenho (vai no navegador); a proteção dos dados é do RLS. `sb_secret_`/`service_role` jamais.
+
 ### Plano da Fase 5 (em duas partes)
 
 - **5A, login:** instalar `@supabase/supabase-js` e `@supabase/ssr`; variáveis de ambiente `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` (local e Vercel); página `/login`; proteção das rotas do painel (quem não está logado vai para `/login`); botão Sair; vincular o login de Caio ao perfil `Caio Henrique`.
@@ -164,25 +170,30 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 ### Próximos passos
 
-1. Caio cria o próprio usuário no Supabase (Authentication → Users → Add user, com e-mail e senha reais e "Auto Confirm User" marcado).
-2. Caio roda o SQL de vínculo que a Claude passar (liga esse login ao perfil `Caio Henrique`).
-3. Caio pega a **Project URL** e a chave pública (**anon / publishable**) em Project Settings → API e informa a Claude. A `service_role`/secret **nunca**.
-4. Claude entrega o código da 5A (login e proteção das rotas).
+1. Conferir que o usuário de Caio existe no Supabase (Authentication → Users) e que o SQL de vínculo foi rodado (o perfil `Caio Henrique` deve ficar com `auth_user_id` preenchido).
+2. Cadastrar as duas variáveis de ambiente na Vercel (Production, Preview e Development).
+3. Subir os arquivos da 5A para o GitHub (a Vercel republica sozinha) e testar: sem login, `/dashboard` deve levar a `/login`; com login correto, abre o painel; "Sair" volta ao `/login`.
+4. Renomear a pasta `superbase` para `supabase` e apagar `components/landing/`.
+5. Só depois: **5B**, trocando `lib/mock-*.ts` por consultas ao Supabase, tela por tela, começando por Processos.
 
 ---
 
 ## 8. Estrutura do código
 
 ```
+proxy.ts                   protege as rotas: sem login vai para /login (Next 16)
 app/
   page.tsx                 raiz: redireciona para /dashboard
+  login/page.tsx           tela de login (fora do grupo (app): sem menu)
   layout.tsx
   globals.css              cores e tipografia (paleta acima)
   (app)/                   grupo de rotas com menu lateral + barra superior
     layout.tsx
     dashboard/ processos/ processos/[id]/ documentos/ analises/ equipe/ configuracoes/
-components/                componentes por área (dashboard, process, processes, team, layout, ui...)
+components/                componentes por área (dashboard, process, processes, team, layout, login, ui...)
 lib/
+  supabase/client.ts       cliente do Supabase para o navegador (chave pública)
+  supabase/proxy.ts        renova a sessão e decide quem entra (usado pelo proxy.ts)
   types.ts                 tipos do domínio (já com officeId; espelham as futuras tabelas)
   mock-data.ts             processos, prazos, usuário e escritório fictícios
   mock-process-details.ts  documentos, histórico, análise e consulta fictícios

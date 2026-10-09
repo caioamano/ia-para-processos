@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 
+import { SignOutButton } from '@/components/layout/sign-out-button'
 import { currentUser, office } from '@/lib/mock-data'
 import { isActivePath, navItems } from '@/lib/navigation'
 import { cn } from '@/lib/utils'
@@ -67,6 +68,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </span>
           <ChevronDown className="size-3.5 text-subtle" />
         </button>
+        <SignOutButton />
         <p className="mt-3 px-3 text-[11px] text-subtle">{office.name}</p>
       </div>
     </>
