@@ -2,6 +2,17 @@ import { SourceRef } from '@/components/source-ref'
 import type { AnalysisSection } from '@/lib/types'
 
 export function AnalysisPanel({ sections }: { sections: AnalysisSection[] }) {
+  if (sections.length === 0) {
+    return (
+      <section className="rounded-lg border border-border bg-card p-5">
+        <h2 className="text-[15px] font-semibold text-foreground">Análise</h2>
+        <p className="mt-4 text-[13px] text-subtle">
+          Ainda não há análise para este processo. Ela aparecerá aqui depois que os documentos forem enviados e lidos.
+        </p>
+      </section>
+    )
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {sections.map((section) => (

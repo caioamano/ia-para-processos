@@ -4,6 +4,7 @@ export function HistoryPanel({ events }: { events: TimelineEvent[] }) {
   return (
     <section className="rounded-lg border border-border bg-card p-5">
       <h2 className="text-[15px] font-semibold text-foreground">Movimentações</h2>
+      {events.length === 0 && <p className="mt-4 text-[13px] text-subtle">Nenhuma movimentação registrada ainda.</p>}
       <ol className="mt-5">
         {events.map((event, index) => (
           <li key={event.id} className="relative flex gap-4 pb-6 last:pb-0">

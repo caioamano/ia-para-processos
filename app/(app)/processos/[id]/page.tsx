@@ -16,8 +16,9 @@ import { UploadDocumentButton } from '@/components/upload-document-button'
 import { getProcessPage } from '@/lib/data/queries'
 
 interface ProcessPageProps {
-  // No Next.js 16, "params" chega como uma Promise e precisa de "await".
+  // No Next.js 16, "params" e "searchParams" chegam como Promise e precisam de "await".
   params: Promise<{ id: string }>
+  searchParams: Promise<{ cadastrado?: string }>
 }
 
 export async function generateMetadata({ params }: ProcessPageProps): Promise<Metadata> {
@@ -26,8 +27,9 @@ export async function generateMetadata({ params }: ProcessPageProps): Promise<Me
   return { title: data ? data.process.number : 'Processo não encontrado' }
 }
 
-export default async function ProcessPage({ params }: ProcessPageProps) {
+export default async function ProcessPage({ params, searchParams }: ProcessPageProps) {
   const { id } = await params
+  const { cadastrado } = await searchParams
   const data = await getProcessPage(id)
 
   // Se o processo não existe (ou é de outro escritório), mostra a página "não encontrado".
@@ -57,6 +59,12 @@ export default async function ProcessPage({ params }: ProcessPageProps) {
           }
         />
       </div>
+
+      {cadastrado === '1' && (
+        <p role="status" className="mt-6 rounded-lg border border-olive/40 bg-muted px-4 py-3 text-sm text-foreground">
+          Processo cadastrado com sucesso. Documentos e análise poderão ser adicionados nas próximas etapas.
+        </p>
+      )}
 
       <DemoNotice>
         Os dados vêm do banco, mas são fictícios, e ainda não há leitura automática de documentos nem envio de

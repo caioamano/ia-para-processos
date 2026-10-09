@@ -16,6 +16,13 @@ export function DocumentsPanel({ documents }: { documents: ProcessDocument[] }) 
             </tr>
           </thead>
           <tbody>
+            {documents.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-5 py-10 text-center text-[13px] text-subtle">
+                  Nenhum documento enviado ainda.
+                </td>
+              </tr>
+            )}
             {documents.map((document) => (
               <tr key={document.id} className="border-b border-line text-[13px] last:border-0 hover:bg-muted">
                 <td className="px-5 py-4">
@@ -34,7 +41,7 @@ export function DocumentsPanel({ documents }: { documents: ProcessDocument[] }) 
         </table>
       </div>
       <div className="border-t border-line px-5 py-3 text-xs text-subtle">
-        {documents.length} documentos neste processo
+        {documents.length} {documents.length === 1 ? 'documento' : 'documentos'} neste processo
       </div>
     </section>
   )

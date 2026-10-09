@@ -28,6 +28,7 @@ export function QueryPanel({ turns }: { turns: ConversationTurn[] }) {
 
       <section className="rounded-lg border border-border bg-card p-5">
         <h2 className="text-[15px] font-semibold text-foreground">Consultas anteriores</h2>
+        {turns.length === 0 && <p className="mt-4 text-[13px] text-subtle">Nenhuma consulta feita ainda.</p>}
         <div className="mt-4 divide-y divide-line">
           {turns.map((turn, index) => (
             <div key={`${turn.question}-${index}`} className="py-4 first:pt-0 last:pb-0">

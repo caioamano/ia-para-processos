@@ -13,6 +13,15 @@ export function SummaryPanel({ process, details }: { process: Process; details: 
     { label: 'Última atualização', value: process.updatedAt },
   ]
 
+  // A frase usa só o que está preenchido; campos vazios ("—") ficam de fora.
+  const known = (value: string) => value !== '—'
+  const summary =
+    `Ação do tipo ${process.type.toLowerCase()} proposta por ${process.client}` +
+    (known(details.counterparty) ? ` em face de ${details.counterparty}` : '') +
+    (known(details.distributedAt) ? `, distribuída em ${details.distributedAt}` : '') +
+    (known(details.court) ? `${known(details.distributedAt) ? ' à' : ', no'} ${details.court}` : '') +
+    `. Última atualização em ${process.updatedAt}.`
+
   return (
     <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
       <section className="rounded-lg border border-border bg-card p-5">
@@ -29,11 +38,7 @@ export function SummaryPanel({ process, details }: { process: Process; details: 
 
       <section className="rounded-lg border border-border bg-card p-5">
         <h2 className="text-[15px] font-semibold text-foreground">Resumo</h2>
-        <p className="mt-4 text-[13px] leading-6 text-muted-foreground">
-          Ação do tipo {process.type.toLowerCase()} proposta por {process.client} em face de {details.counterparty},
-          distribuída em {details.distributedAt} à {details.court}. A última movimentação registrada foi em{' '}
-          {process.updatedAt}.
-        </p>
+        <p className="mt-4 text-[13px] leading-6 text-muted-foreground">{summary}</p>
       </section>
     </div>
   )

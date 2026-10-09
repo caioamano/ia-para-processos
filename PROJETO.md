@@ -123,8 +123,8 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 | 3 | Vercel | Concluída |
 | 4 | Supabase (projeto, tabelas com `office_id`, RLS, dados fictícios) | Concluída |
 | 5 | Autenticação (e telas passam a ler do banco) | **Concluída** (5A login; 5B todas as telas do painel leem do Supabase; só o gráfico de atividade do dashboard segue ilustrativo) |
-| 6 | Multi-tenancy (validação do isolamento com RLS) | **Em andamento** (scripts 04 e 05 entregues; falta criar o 2º login, rodar a conferência e testar pelo site) |
-| 7 | Cadastro de processos | Pendente |
+| 6 | Multi-tenancy (validação do isolamento com RLS) | **Concluída** (2º escritório; conferência SQL 35/35 ✅ e teste pelo site com os dois logins, em 09/10/2026) |
+| 7 | Cadastro de processos | **Em andamento** (código e teste de segurança entregues em 09/10/2026; falta testar no site) |
 | 8 | Upload de documentos | Pendente |
 | 9 | Gemini | Pendente |
 | 10 | Análise de documentos | Pendente |
@@ -139,7 +139,7 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 ## 7. Estado atual
 
-**Atualizado em: 09/10/2026 (Fase 5 concluída; Fase 6 em andamento)**
+**Atualizado em: 09/10/2026 (Fase 6 concluída; Fase 7 entregue, aguardando teste)**
 
 - **Fase 5A (login) concluída.** Login por e-mail e senha, rotas protegidas por `proxy.ts`, botão Sair. Variáveis na Vercel: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (só na Vercel, nunca no GitHub; sem elas o site responde 500 de propósito). O login de Caio está vinculado ao perfil `Caio Henrique` (Administrador, escritório Silva & Associados).
 - **Fase 5B concluída (08/10/2026).** Todas as telas do painel leem do Supabase, com o RLS filtrando pelo usuário logado: Processos, Processo individual, Documentos, Análises, Equipe, Configurações (nome do escritório), menu lateral e barra superior (usuário, função, escritório e data de hoje) e dashboard (processos recentes, 4 indicadores e próximos prazos). Todas as consultas ficam em `lib/data/queries.ts`. Testada e funcionando em produção (09/10/2026).
@@ -147,7 +147,10 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 - Se o login existir mas não estiver vinculado a um perfil (`auth_user_id` vazio em `profiles`), o painel mostra a tela "Conta ainda sem escritório" em vez de telas vazias.
 - Os indicadores do dashboard são: processos ativos (status diferente de Concluído), processos analisados (análises Concluída), documentos (e enviados nos últimos 30 dias) e prazos a vencer (com os da semana). Prazos já vencidos não aparecem.
 - Arquivos que **não são mais usados por nenhuma tela** e podem ser apagados: `lib/mock-data.ts`, `lib/mock-team.ts`, `lib/mock-process-details.ts` (apague os três juntos, pois um importa o outro), além de `components/landing/`.
-- Pendência de organização: a pasta do SQL no GitHub se chama `superbase` (com "r"); o correto é `supabase`.
+
+- **Fase 6 (09/10/2026):** o escritório fictício Ribeiro & Lima Advocacia existe (8 processos, 3 pessoas) e o login da administradora `Marcela Ribeiro` foi criado e vinculado. A conferência `05_conferir_isolamento.sql` com os dois logins reais passou em **35 de 35 testes** (cada um vê todos os dados do próprio escritório e nenhum do outro; tentativas de alteração entre escritórios afetam 0 linhas; visitante sem login é bloqueado). O teste pelo site com os dois logins também passou: cada um só vê o próprio escritório e abrir por link direto o processo do outro dá "não encontrado". **Fase 6 concluída.** A pasta do SQL já foi renomeada para `supabase`.
+- **Fase 7 (entregue em 09/10/2026, aguardando teste no site):** botão **Novo processo** (só para Administrador e Advogado) abre `/processos/novo`, com formulário de número (formato CNJ, aceita só os 20 dígitos), cliente, tipo, situação, responsável, parte contrária, juízo, valor da causa e data de distribuição. A gravação roda no servidor (`app/(app)/processos/novo/actions.ts`): confere login, função e campos; o escritório vem da sessão, nunca do formulário; o RLS e a chave composta do banco são a segunda barreira. Número repetido no escritório, responsável de outro escritório e falta de permissão viram mensagens amigáveis. Ao cadastrar, abre o processo novo, cujas abas vazias mostram "ainda não há...". As regras do formulário estão em `lib/process-form.ts`. O teste de segurança da escrita é `supabase/06_testar_cadastro.sql` (13 testes; apaga o que cria).
+- **Ainda não valida o dígito verificador do CNJ** (só o formato); os números fictícios do desenvolvimento não passariam. Avaliar antes do piloto.
 
 ### Decisões tomadas
 
@@ -172,14 +175,14 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 ### Plano da Fase 5 (em duas partes)
 
-- **5A, login:** instalar `@supabase/supabase-js` e `@supabase/ssr`; variáveis de ambiente `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` (local e Vercel); página `/login`; proteção das rotas do painel (quem não está logado vai para `/login`); botão Sair; vincular o login de Caio ao perfil `Caio Henrique`.
+- **5A, login:** instalar `@supabase/supabase-js` e `@supabase/ssr`; variáveis de ambiente `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Vercel); página `/login`; proteção das rotas do painel (quem não está logado vai para `/login`); botão Sair; vincular o login de Caio ao perfil `Caio Henrique`.
 - **5B, dados reais (concluída):** as telas passaram a consultar o Supabase com o usuário logado, e o RLS filtra sozinho. Os `lib/mock-*.ts` ficaram sem uso.
 
 ### Próximos passos
 
-1. **Fase 6:** rodar `superbase/04_segundo_escritorio.sql` (escritório fictício Ribeiro & Lima Advocacia: 8 processos, 3 pessoas), criar o 2º login no Supabase (Authentication → Users, com Auto Confirm), vincular ao perfil `marcela@ribeirolima.example`, rodar `05_conferir_isolamento.sql` (tudo ✅) e testar pelo site com os dois logins: cada um só vê o próprio escritório, e abrir por link direto o processo do outro dá "não encontrado".
-2. Limpeza: apagar `lib/mock-data.ts`, `lib/mock-team.ts`, `lib/mock-process-details.ts` e `components/landing/`; renomear `superbase` para `supabase`.
-3. **Fase 7:** cadastro de processos (primeira escrita no banco; as políticas de insert já existem).
+1. **Testar a Fase 7 no site** (Caio e Marcela): cadastrar um processo, ver que aparece em Processos, no Dashboard e com as abas vazias; tentar número repetido; conferir que um login de estagiário não vê o botão. Rodar `supabase/06_testar_cadastro.sql` (13 ✅).
+2. Limpeza: apagar `lib/mock-data.ts`, `lib/mock-team.ts`, `lib/mock-process-details.ts` e `components/landing/` (os três `mock` juntos).
+3. **Fase 8:** upload de documentos PDF (Supabase Storage, com regras de acesso por escritório).
 
 ---
 
@@ -194,7 +197,7 @@ app/
   globals.css              cores e tipografia (paleta acima)
   (app)/                   grupo de rotas com menu lateral + barra superior
     layout.tsx
-    dashboard/ processos/ processos/[id]/ documentos/ analises/ equipe/ configuracoes/
+    dashboard/ processos/ processos/novo/ processos/[id]/ documentos/ analises/ equipe/ configuracoes/
 components/                componentes por área (dashboard, process, processes, team, layout, login, ui...)
 lib/
   supabase/client.ts       cliente do Supabase para o navegador (chave pública)
@@ -202,6 +205,7 @@ lib/
   supabase/proxy.ts        renova a sessão e decide quem entra (usado pelo proxy.ts)
   data/queries.ts          TODAS as consultas ao banco (sessão, processos, documentos, análises, equipe, dashboard)
   permissions.ts           tabela de permissões exibida na tela Equipe (espelha o RLS)
+  process-form.ts          regras do formulário Novo processo (validação; sem React nem banco)
   types.ts                 tipos do domínio (já com officeId; espelham as futuras tabelas)
   mock-data.ts, mock-process-details.ts, mock-team.ts   SEM USO (dados fictícios antigos; podem ser apagados)
   navigation.ts            itens do menu
@@ -211,6 +215,7 @@ supabase/                  (rodados à mão no SQL Editor do Supabase, nesta ord
   03_teste_isolamento.sql  testes de isolamento da Fase 4 (NÃO rodar de novo: desfaz o vínculo do login)
   04_segundo_escritorio.sql  escritório fictício Ribeiro & Lima Advocacia (Fase 6)
   05_conferir_isolamento.sql conferência read-only com os dois logins reais; pode rodar sempre que quiser
+  06_testar_cadastro.sql   teste de segurança do cadastro de processos (Fase 7); apaga o que cria; pode rodar quando quiser
 ```
 
 Os arquivos `lib/mock-*.ts` não são mais usados (ver "Estado atual") e podem ser apagados. Nunca colocar processos reais neles.
