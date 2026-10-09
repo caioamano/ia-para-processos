@@ -1,6 +1,7 @@
 import { MoreHorizontal } from 'lucide-react'
 
-import { activityBars } from '@/lib/mock-data'
+// Alturas (em %) de exemplo. O gráfico é ilustrativo até existir um registro de atividades real.
+const activityBars = [42, 58, 35, 72, 54, 88, 64, 76, 48, 68, 82, 59, 92, 70]
 
 export function ActivityChart() {
   return (
@@ -8,7 +9,7 @@ export function ActivityChart() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-[15px] font-semibold text-foreground">Atividade do escritório</h2>
-          <p className="mt-1 text-xs text-subtle">Movimentações dos últimos 7 dias.</p>
+          <p className="mt-1 text-xs text-subtle">Gráfico ilustrativo (dados de exemplo).</p>
         </div>
         <button className="text-subtle hover:text-primary" aria-label="Mais opções">
           <MoreHorizontal className="size-4" />
@@ -27,10 +28,8 @@ export function ActivityChart() {
       </div>
 
       <div className="mt-3 flex justify-between px-1 text-[10px] text-subtle">
-        <span>01 out.</span>
-        <span>03 out.</span>
-        <span>05 out.</span>
-        <span>07 out.</span>
+        <span>Há 14 dias</span>
+        <span>Hoje</span>
       </div>
     </div>
   )

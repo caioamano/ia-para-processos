@@ -122,8 +122,8 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 | 2 | GitHub | Concluída |
 | 3 | Vercel | Concluída |
 | 4 | Supabase (projeto, tabelas com `office_id`, RLS, dados fictícios) | Concluída |
-| 5 | Autenticação (e telas passam a ler do banco) | **Em andamento** (5A login: concluída; 5B dados reais: Processos, Processo individual, Documentos, Análises e "Processos recentes" do dashboard migrados; faltam menu/topbar, Equipe, Configurações e indicadores do dashboard) |
-| 6 | Multi-tenancy (validação do isolamento com RLS) | Pendente |
+| 5 | Autenticação (e telas passam a ler do banco) | **Concluída** (5A login; 5B todas as telas do painel leem do Supabase; só o gráfico de atividade do dashboard segue ilustrativo) |
+| 6 | Multi-tenancy (validação do isolamento com RLS) | **Próxima** |
 | 7 | Cadastro de processos | Pendente |
 | 8 | Upload de documentos | Pendente |
 | 9 | Gemini | Pendente |
@@ -139,13 +139,15 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 ## 7. Estado atual
 
-**Atualizado em: 08/10/2026 (Fase 5B, parte 1 entregue)**
+**Atualizado em: 08/10/2026 (Fase 5B concluída)**
 
 - **Fase 5A (login) concluída.** Login por e-mail e senha, rotas protegidas por `proxy.ts`, botão Sair. Variáveis na Vercel: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (só na Vercel, nunca no GitHub; sem elas o site responde 500 de propósito). O login de Caio está vinculado ao perfil `Caio Henrique` (Administrador, escritório Silva & Associados).
-- **Fase 5B em andamento (entregue em 08/10/2026, ainda não testado em produção).** Estas telas agora leem do Supabase, com o RLS filtrando pelo usuário logado: **Processos** (lista), **Processo individual** (Resumo, Documentos, Análise, Consulta, Histórico), **Documentos**, **Análises** e a tabela **Processos recentes** do dashboard. Todas as consultas ficam em `lib/data/queries.ts`.
-- **Ainda usam dados fictícios (`lib/mock-*.ts`):** nome do escritório e usuário no menu lateral e na barra superior (`currentUser`, `office`), Equipe, Configurações, e no dashboard os 4 indicadores, os próximos prazos e o gráfico de atividade. A data da barra superior está fixa em "07 de outubro de 2026".
-- `lib/mock-process-details.ts` e a lista `processes` de `lib/mock-data.ts` **não são mais usados** por nenhuma tela; podem ser apagados na limpeza final.
-- Pendências de organização: a pasta do SQL no GitHub se chama `superbase` (com "r"); o correto é `supabase`. A pasta `components/landing/` está sem uso e pode ser apagada.
+- **Fase 5B concluída (08/10/2026).** Todas as telas do painel leem do Supabase, com o RLS filtrando pelo usuário logado: Processos, Processo individual, Documentos, Análises, Equipe, Configurações (nome do escritório), menu lateral e barra superior (usuário, função, escritório e data de hoje) e dashboard (processos recentes, 4 indicadores e próximos prazos). Todas as consultas ficam em `lib/data/queries.ts`. A parte 1 (Processos, Documentos, Análises, recentes) foi testada em produção; a parte 2 (usuário/escritório reais, Equipe, indicadores e prazos) foi entregue e aguarda teste.
+- **Ainda ilustrativo:** o gráfico "Atividade do escritório" do dashboard (barras de exemplo, está rotulado como ilustrativo); em Configurações, e-mail, telefone e cidade do escritório são exemplos (a tabela `offices` só tem nome e logo); o botão Convidar usuário, Salvar alterações, Enviar logo e o envio de documentos ainda não fazem nada.
+- Se o login existir mas não estiver vinculado a um perfil (`auth_user_id` vazio em `profiles`), o painel mostra a tela "Conta ainda sem escritório" em vez de telas vazias.
+- Os indicadores do dashboard são: processos ativos (status diferente de Concluído), processos analisados (análises Concluída), documentos (e enviados nos últimos 30 dias) e prazos a vencer (com os da semana). Prazos já vencidos não aparecem.
+- Arquivos que **não são mais usados por nenhuma tela** e podem ser apagados: `lib/mock-data.ts`, `lib/mock-team.ts`, `lib/mock-process-details.ts` (apague os três juntos, pois um importa o outro), além de `components/landing/`.
+- Pendência de organização: a pasta do SQL no GitHub se chama `superbase` (com "r"); o correto é `supabase`.
 
 ### Decisões tomadas
 
@@ -171,14 +173,14 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 ### Plano da Fase 5 (em duas partes)
 
 - **5A, login:** instalar `@supabase/supabase-js` e `@supabase/ssr`; variáveis de ambiente `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` (local e Vercel); página `/login`; proteção das rotas do painel (quem não está logado vai para `/login`); botão Sair; vincular o login de Caio ao perfil `Caio Henrique`.
-- **5B, dados reais:** trocar `lib/mock-*.ts` por consultas ao Supabase, tela por tela (começando por Processos), usando o usuário logado para que o RLS filtre sozinho. Os mocks só são apagados depois que todas as telas migrarem.
+- **5B, dados reais (concluída):** as telas passaram a consultar o Supabase com o usuário logado, e o RLS filtra sozinho. Os `lib/mock-*.ts` ficaram sem uso.
 
 ### Próximos passos
 
-1. Subir os arquivos da 5B e testar em produção: Processos deve mostrar os 128 processos; abrir um processo deve mostrar documentos, análise, consulta e histórico do banco; Documentos e Análises devem listar dados reais.
-2. **5B-2:** trocar `currentUser` e `office` (menu lateral, barra superior, Configurações) pelos dados reais do usuário logado e do escritório; migrar Equipe (profiles) e, no dashboard, indicadores e próximos prazos (`deadlines`).
-3. Limpeza: renomear `superbase` para `supabase`, apagar `components/landing/`, `lib/mock-process-details.ts` e o que sobrar de `lib/mock-*.ts`.
-4. Depois: Fase 6 (validar isolamento com um segundo escritório) e Fase 7 (cadastro de processos).
+1. Testar em produção a parte 2 da 5B: menu e barra superior com o seu nome e escritório, data de hoje, Equipe com as 5 pessoas, Configurações com o nome do escritório e dashboard com indicadores e prazos reais.
+2. Limpeza: apagar `lib/mock-data.ts`, `lib/mock-team.ts`, `lib/mock-process-details.ts` e `components/landing/`; renomear `superbase` para `supabase`.
+3. **Fase 6 (multi-tenancy):** criar um segundo escritório fictício com outro usuário e comprovar, pelo site, que um não vê os dados do outro.
+4. **Fase 7:** cadastro de processos (primeira escrita no banco; as políticas de insert já existem).
 
 ---
 
@@ -199,11 +201,10 @@ lib/
   supabase/client.ts       cliente do Supabase para o navegador (chave pública)
   supabase/server.ts       cliente do Supabase para o servidor (envia o login; o RLS filtra)
   supabase/proxy.ts        renova a sessão e decide quem entra (usado pelo proxy.ts)
-  data/queries.ts          TODAS as consultas ao banco (processos, documentos, análises...)
+  data/queries.ts          TODAS as consultas ao banco (sessão, processos, documentos, análises, equipe, dashboard)
+  permissions.ts           tabela de permissões exibida na tela Equipe (espelha o RLS)
   types.ts                 tipos do domínio (já com officeId; espelham as futuras tabelas)
-  mock-data.ts             processos, prazos, usuário e escritório fictícios
-  mock-process-details.ts  documentos, histórico, análise e consulta fictícios
-  mock-team.ts             equipe e permissões fictícias
+  mock-data.ts, mock-process-details.ts, mock-team.ts   SEM USO (dados fictícios antigos; podem ser apagados)
   navigation.ts            itens do menu
 supabase/                  (rodados à mão no SQL Editor do Supabase, nesta ordem)
   01_schema.sql            tabelas + segurança (RLS)
@@ -211,7 +212,7 @@ supabase/                  (rodados à mão no SQL Editor do Supabase, nesta ord
   03_teste_isolamento.sql  testes de isolamento entre escritórios
 ```
 
-Os arquivos `lib/mock-*.ts` estão sendo substituídos por consultas ao Supabase (Fase 5B). Nunca colocar processos reais neles.
+Os arquivos `lib/mock-*.ts` não são mais usados (ver "Estado atual") e podem ser apagados. Nunca colocar processos reais neles.
 
 ---
 

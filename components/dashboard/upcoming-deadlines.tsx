@@ -1,5 +1,4 @@
-import { deadlines } from '@/lib/mock-data'
-import type { DeadlineTone } from '@/lib/types'
+import type { Deadline, DeadlineTone } from '@/lib/types'
 
 const toneStyles: Record<DeadlineTone, string> = {
   pending: 'bg-status-pending-bg text-status-pending',
@@ -7,7 +6,7 @@ const toneStyles: Record<DeadlineTone, string> = {
   review: 'bg-status-review-bg text-status-review',
 }
 
-export function UpcomingDeadlines() {
+export function UpcomingDeadlines({ deadlines }: { deadlines: Deadline[] }) {
   return (
     <div className="rounded-lg border border-border bg-card p-5">
       <div className="flex items-center justify-between">
@@ -19,6 +18,7 @@ export function UpcomingDeadlines() {
       </div>
 
       <div className="mt-5 flex flex-col gap-4">
+        {deadlines.length === 0 && <p className="text-xs text-subtle">Nenhum prazo a vencer.</p>}
         {deadlines.map((deadline) => (
           <div key={deadline.id} className="flex items-center gap-3">
             <div

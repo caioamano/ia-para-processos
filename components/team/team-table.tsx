@@ -1,5 +1,4 @@
 import { ToneBadge } from '@/components/tone-badge'
-import { currentUser } from '@/lib/mock-data'
 import type { TeamMember } from '@/lib/types'
 
 function initialsOf(name: string) {
@@ -10,7 +9,7 @@ function initialsOf(name: string) {
     .join('')
 }
 
-export function TeamTable({ members }: { members: TeamMember[] }) {
+export function TeamTable({ members, currentUserId }: { members: TeamMember[]; currentUserId: string }) {
   return (
     <section className="mt-6 rounded-lg border border-border bg-card">
       <div className="border-b border-line px-5 py-5">
@@ -39,7 +38,7 @@ export function TeamTable({ members }: { members: TeamMember[] }) {
                     <div>
                       <span className="block font-medium text-foreground">
                         {member.name}
-                        {member.id === currentUser.id && <span className="ml-2 text-[11px] text-subtle">(você)</span>}
+                        {member.id === currentUserId && <span className="ml-2 text-[11px] text-subtle">(você)</span>}
                       </span>
                       <span className="block text-[11px] text-subtle">{member.email}</span>
                     </div>

@@ -60,3 +60,34 @@ export function formatBytes(bytes: number) {
   if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`
   return `${Math.max(1, Math.round(bytes / 1024))} KB`
 }
+
+// ---------- Datas "de hoje" no horário de Brasília ----------
+
+// Hoje, no formato do banco: "2026-10-08".
+export function todayInSaoPaulo() {
+  const { year, month, day } = partsInSaoPaulo(new Date())
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+// Soma dias a uma data "2026-10-08" e devolve no mesmo formato.
+export function addDaysToDateOnly(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+// Quantos dias faltam de uma data para outra (negativo se já passou).
+export function daysBetweenDateOnly(from: string, to: string) {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000)
+}
+
+// "8 de outubro de 2026" (barra superior).
+export function formatLongDate(value: Date) {
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: TIME_ZONE, day: 'numeric', month: 'long', year: 'numeric' }).format(value)
+}
+
+// Mês abreviado em maiúsculas ("OUT") e dia com dois dígitos ("08"), para o cartão de prazos.
+export function deadlineBadge(value: string) {
+  const [, month, day] = value.split('-')
+  return { month: monthLabels[Number(month) - 1].replace('.', '').toUpperCase(), day }
+}

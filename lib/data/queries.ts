@@ -1,11 +1,15 @@
 import { cache } from 'react'
 
 import {
+  addDaysToDateOnly,
+  daysBetweenDateOnly,
+  deadlineBadge,
   formatBytes,
   formatCurrency,
   formatDateOnly,
   formatTimestamp,
   formatTimestampDate,
+  todayInSaoPaulo,
 } from '@/lib/format'
 import { createClient } from '@/lib/supabase/server'
 import type {
@@ -13,13 +17,18 @@ import type {
   AnalysisSection,
   AnalysisStatus,
   ConversationTurn,
+  CurrentUser,
+  Deadline,
   DocumentStatus,
+  Office,
   OfficeDocument,
   Process,
   ProcessDetails,
   ProcessDocument,
   ProcessStatus,
   ProcessType,
+  Role,
+  TeamMember,
   TimelineEvent,
 } from '@/lib/types'
 
@@ -338,4 +347,174 @@ export async function getAnalysisOverview(): Promise<AnalysisOverview[]> {
       },
     ]
   })
+}
+
+
+// ---------- Quem está logado (menu lateral, barra superior, Configurações) ----------
+
+export interface SessionInfo {
+  user: CurrentUser
+  office: Office
+}
+
+function initialsOf(name: string) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+}
+
+// Devolve o perfil e o escritório de quem está logado. Devolve null se o login ainda não
+// está vinculado a um perfil (nesse caso o RLS esconde tudo, e o painel avisa).
+export const getSession = cache(async (): Promise<SessionInfo | null> => {
+  const supabase = await createClient()
+
+  // getClaims() confere a assinatura do login (mais seguro que só ler o cookie).
+  const { data: claimsData } = await supabase.auth.getClaims()
+  const authUserId = claimsData?.claims?.sub
+  if (!authUserId) return null
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, office_id, name, role, offices(name)')
+    .eq('auth_user_id', authUserId)
+    .maybeSingle()
+  if (error) fail('o seu perfil', error)
+  if (!data) return null
+
+  const row = data as unknown as {
+    id: string
+    office_id: string
+    name: string
+    role: Role
+    offices: { name: string } | { name: string }[] | null
+  }
+
+  return {
+    user: { id: row.id, officeId: row.office_id, name: row.name, initials: initialsOf(row.name), role: row.role },
+    office: { id: row.office_id, name: firstOf(row.offices)?.name ?? 'Escritório' },
+  }
+})
+
+// ---------- Equipe ----------
+
+const ROLE_ORDER: Record<string, number> = { Administrador: 0, Advogado: 1, Estagiário: 2 }
+
+export async function getTeamMembers(): Promise<TeamMember[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, office_id, name, email, role, status, last_access_at')
+  if (error) fail('a equipe', error)
+
+  type Row = {
+    id: string
+    office_id: string
+    name: string
+    email: string
+    role: Role
+    status: TeamMember['status']
+    last_access_at: string | null
+  }
+
+  return (data as Row[])
+    .map((row) => ({
+      id: row.id,
+      officeId: row.office_id,
+      name: row.name,
+      email: row.email,
+      role: row.role,
+      status: row.status,
+      lastAccess: row.last_access_at ? formatTimestamp(row.last_access_at) : '—',
+    }))
+    .sort((a, b) => (ROLE_ORDER[a.role] ?? 9) - (ROLE_ORDER[b.role] ?? 9) || a.name.localeCompare(b.name, 'pt-BR'))
+}
+
+// ---------- Dashboard: indicadores e próximos prazos ----------
+
+export interface DashboardStat {
+  value: string
+  note: string
+}
+
+export interface DashboardData {
+  active: DashboardStat
+  analyzed: DashboardStat
+  documents: DashboardStat
+  pending: DashboardStat
+  deadlines: Deadline[]
+}
+
+export async function getDashboardData(): Promise<DashboardData> {
+  const supabase = await createClient()
+
+  const today = todayInSaoPaulo()
+  const weekEnd = addDaysToDateOnly(today, 7)
+  const monthAgo = new Date(Date.now() - 30 * 86_400_000).toISOString()
+
+  // "head: true" pede só a CONTAGEM, sem trazer as linhas.
+  const countOf = { count: 'exact', head: true } as const
+
+  const [total, active, analyzed, documents, recentDocuments, weekDeadlines, upcoming] = await Promise.all([
+    supabase.from('processes').select('id', countOf),
+    supabase.from('processes').select('id', countOf).neq('status', 'Concluído'),
+    supabase.from('analyses').select('id', countOf).eq('status', 'Concluída'),
+    supabase.from('documents').select('id', countOf),
+    supabase.from('documents').select('id', countOf).gte('uploaded_at', monthAgo),
+    supabase.from('deadlines').select('id', countOf).gte('due_date', today).lte('due_date', weekEnd),
+    supabase
+      .from('deadlines')
+      .select('id, title, due_date, processes(number)', { count: 'exact' })
+      .gte('due_date', today)
+      .order('due_date', { ascending: true })
+      .order('title', { ascending: true })
+      .limit(3),
+  ])
+
+  for (const [what, result] of [
+    ['os processos', total],
+    ['os processos ativos', active],
+    ['as análises', analyzed],
+    ['os documentos', documents],
+    ['os documentos recentes', recentDocuments],
+    ['os prazos da semana', weekDeadlines],
+    ['os prazos', upcoming],
+  ] as const) {
+    if (result.error) fail(what, result.error)
+  }
+
+  const totalProcesses = total.count ?? 0
+  const analyzedCount = analyzed.count ?? 0
+  const percent = totalProcesses === 0 ? 0 : Math.round((analyzedCount / totalProcesses) * 100)
+  const number = (value: number) => value.toLocaleString('pt-BR')
+
+  type DeadlineRow = {
+    id: string
+    title: string
+    due_date: string
+    processes: { number: string } | { number: string }[] | null
+  }
+
+  const deadlines: Deadline[] = (upcoming.data as unknown as DeadlineRow[]).map((row) => {
+    const days = daysBetweenDateOnly(today, row.due_date)
+    return {
+      id: row.id,
+      ...deadlineBadge(row.due_date),
+      title: row.title,
+      processNumber: firstOf(row.processes)?.number ?? '—',
+      when: days === 0 ? 'Hoje' : days === 1 ? 'Amanhã' : `Em ${days} dias`,
+      tone: days <= 1 ? 'pending' : days <= 7 ? 'progress' : 'review',
+    }
+  })
+
+  return {
+    active: { value: number(active.count ?? 0), note: `${number(totalProcesses)} processos no escritório` },
+    analyzed: { value: number(analyzedCount), note: `${percent}% dos processos` },
+    documents: { value: number(documents.count ?? 0), note: `${number(recentDocuments.count ?? 0)} enviados nos últimos 30 dias` },
+    pending: { value: number(upcoming.count ?? 0), note: `${number(weekDeadlines.count ?? 0)} com prazo nesta semana` },
+    deadlines,
+  }
 }

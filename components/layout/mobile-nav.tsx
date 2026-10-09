@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react'
 import { Menu, X } from 'lucide-react'
 
 import { SidebarContent } from '@/components/layout/sidebar-content'
+import type { CurrentUser } from '@/lib/types'
 
 // Botão de menu + gaveta lateral para telas menores que 1024px.
-export function MobileNav() {
+export function MobileNav({ user, officeName }: { user: CurrentUser; officeName: string }) {
   const [open, setOpen] = useState(false)
 
   // Enquanto a gaveta está aberta: trava a rolagem da página, fecha com a tecla Esc
@@ -64,7 +65,7 @@ export function MobileNav() {
             >
               <X className="size-4" />
             </button>
-            <SidebarContent onNavigate={() => setOpen(false)} />
+            <SidebarContent user={user} officeName={officeName} onNavigate={() => setOpen(false)} />
           </div>
         </div>
       )}

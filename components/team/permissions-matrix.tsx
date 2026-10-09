@@ -1,6 +1,6 @@
 import { Check, Minus } from 'lucide-react'
 
-import { permissions } from '@/lib/mock-team'
+import { permissions } from '@/lib/permissions'
 import { ROLES } from '@/lib/types'
 
 export function PermissionsMatrix() {

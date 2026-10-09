@@ -5,11 +5,13 @@ import { DemoNotice } from '@/components/demo-notice'
 import { PageHeader } from '@/components/page-header'
 import { SettingsSection } from '@/components/settings/settings-section'
 import { TextField } from '@/components/settings/text-field'
-import { office } from '@/lib/mock-data'
+import { getSession } from '@/lib/data/queries'
 
 export const metadata: Metadata = { title: 'Configurações' }
 
-export default function ConfiguracoesPage() {
+export default async function ConfiguracoesPage() {
+  const session = await getSession()
+
   return (
     <>
       <PageHeader
@@ -26,11 +28,14 @@ export default function ConfiguracoesPage() {
         }
       />
 
-      <DemoNotice>As alterações ainda não são salvas: a gravação será ativada junto com o banco de dados.</DemoNotice>
+      <DemoNotice>
+        O nome do escritório vem do banco; os demais campos são exemplos. As alterações ainda não são salvas: a gravação
+        será ativada em uma fase futura.
+      </DemoNotice>
 
       <SettingsSection title="Dados do escritório" description="Informações exibidas para a sua equipe.">
         <div className="grid gap-5 md:grid-cols-2">
-          <TextField id="office-name" label="Nome do escritório" defaultValue={office.name} />
+          <TextField id="office-name" label="Nome do escritório" defaultValue={session?.office.name ?? ''} />
           <TextField id="office-email" label="E-mail de contato" type="email" defaultValue="contato@silvaassociados.example" />
           <TextField id="office-phone" label="Telefone" defaultValue="(11) 3000-0000" />
           <TextField id="office-city" label="Cidade / UF" defaultValue="São Paulo / SP" />
