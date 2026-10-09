@@ -13,14 +13,7 @@ import { SummaryPanel } from '@/components/process/summary-panel'
 import { StatusBadge } from '@/components/status-badge'
 import { Tabs } from '@/components/tabs'
 import { UploadDocumentButton } from '@/components/upload-document-button'
-import {
-  getAnalysis,
-  getConversation,
-  getDocuments,
-  getProcessById,
-  getProcessDetails,
-  getTimeline,
-} from '@/lib/mock-process-details'
+import { getProcessPage } from '@/lib/data/queries'
 
 interface ProcessPageProps {
   // No Next.js 16, "params" chega como uma Promise e precisa de "await".
@@ -29,19 +22,18 @@ interface ProcessPageProps {
 
 export async function generateMetadata({ params }: ProcessPageProps): Promise<Metadata> {
   const { id } = await params
-  const currentProcess = getProcessById(id)
-  return { title: currentProcess ? currentProcess.number : 'Processo não encontrado' }
+  const data = await getProcessPage(id)
+  return { title: data ? data.process.number : 'Processo não encontrado' }
 }
 
 export default async function ProcessPage({ params }: ProcessPageProps) {
   const { id } = await params
-  const currentProcess = getProcessById(id)
+  const data = await getProcessPage(id)
 
   // Se o processo não existe (ou é de outro escritório), mostra a página "não encontrado".
-  if (!currentProcess) notFound()
+  if (!data) notFound()
 
-  const details = getProcessDetails(currentProcess)
-  const documents = getDocuments(currentProcess)
+  const { process: currentProcess, details, documents, timeline, analysis, conversation } = data
 
   return (
     <>
@@ -66,7 +58,10 @@ export default async function ProcessPage({ params }: ProcessPageProps) {
         />
       </div>
 
-      <DemoNotice />
+      <DemoNotice>
+        Os dados vêm do banco, mas são fictícios, e ainda não há leitura automática de documentos nem envio de
+        arquivos.
+      </DemoNotice>
 
       <div className="mt-6">
         <Tabs
@@ -84,17 +79,17 @@ export default async function ProcessPage({ params }: ProcessPageProps) {
             {
               id: 'analise',
               label: 'Análise',
-              content: <AnalysisPanel sections={getAnalysis(currentProcess)} />,
+              content: <AnalysisPanel sections={analysis} />,
             },
             {
               id: 'consulta',
               label: 'Consulta',
-              content: <QueryPanel turns={getConversation(currentProcess)} />,
+              content: <QueryPanel turns={conversation} />,
             },
             {
               id: 'historico',
               label: 'Histórico',
-              content: <HistoryPanel events={getTimeline(currentProcess)} />,
+              content: <HistoryPanel events={timeline} />,
             },
           ]}
         />

@@ -87,7 +87,8 @@ export interface TimelineEvent {
 export interface AnalysisItem {
   label: string
   value: string
-  source: SourceReference
+  // Pode ser vazio: o banco permite uma informação sem fonte (ex.: se o documento foi apagado).
+  source: SourceReference | null
 }
 
 export interface AnalysisSection {
@@ -99,7 +100,7 @@ export interface AnalysisSection {
 export interface ConversationTurn {
   question: string
   answer: string
-  source: SourceReference
+  source: SourceReference | null
 }
 
 // ---------- Telas de Documentos, Análises, Equipe ----------

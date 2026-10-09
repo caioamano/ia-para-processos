@@ -1,4 +1,3 @@
-import { SourceRef } from '@/components/source-ref'
 import type { Process, ProcessDetails } from '@/lib/types'
 
 export function SummaryPanel({ process, details }: { process: Process; details: ProcessDetails }) {
@@ -35,9 +34,6 @@ export function SummaryPanel({ process, details }: { process: Process; details: 
           distribuída em {details.distributedAt} à {details.court}. A última movimentação registrada foi em{' '}
           {process.updatedAt}.
         </p>
-        <div className="mt-4">
-          <SourceRef source={{ document: 'Petição Inicial', page: 1 }} />
-        </div>
       </section>
     </div>
   )

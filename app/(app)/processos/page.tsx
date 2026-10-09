@@ -3,11 +3,13 @@ import type { Metadata } from 'next'
 import { NewProcessButton } from '@/components/new-process-button'
 import { PageHeader } from '@/components/page-header'
 import { ProcessList } from '@/components/processes/process-list'
-import { processes } from '@/lib/mock-data'
+import { getProcesses } from '@/lib/data/queries'
 
 export const metadata: Metadata = { title: 'Processos' }
 
-export default function ProcessosPage() {
+export default async function ProcessosPage() {
+  const processes = await getProcesses()
+
   return (
     <>
       <PageHeader

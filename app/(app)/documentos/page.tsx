@@ -3,11 +3,13 @@ import type { Metadata } from 'next'
 import { DocumentList } from '@/components/documents/document-list'
 import { PageHeader } from '@/components/page-header'
 import { UploadDocumentButton } from '@/components/upload-document-button'
-import { getAllDocuments } from '@/lib/mock-process-details'
+import { getOfficeDocuments } from '@/lib/data/queries'
 
 export const metadata: Metadata = { title: 'Documentos' }
 
-export default function DocumentosPage() {
+export default async function DocumentosPage() {
+  const documents = await getOfficeDocuments()
+
   return (
     <>
       <PageHeader
@@ -16,7 +18,7 @@ export default function DocumentosPage() {
         description="Envie e organize os documentos de cada processo."
         action={<UploadDocumentButton />}
       />
-      <DocumentList documents={getAllDocuments()} />
+      <DocumentList documents={documents} />
     </>
   )
 }

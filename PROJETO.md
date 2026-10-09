@@ -122,7 +122,7 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 | 2 | GitHub | Concluída |
 | 3 | Vercel | Concluída |
 | 4 | Supabase (projeto, tabelas com `office_id`, RLS, dados fictícios) | Concluída |
-| 5 | Autenticação (e telas passam a ler do banco) | **Em andamento** (5A: código entregue, falta configurar e testar; 5B pendente) |
+| 5 | Autenticação (e telas passam a ler do banco) | **Em andamento** (5A login: concluída; 5B dados reais: Processos, Processo individual, Documentos, Análises e "Processos recentes" do dashboard migrados; faltam menu/topbar, Equipe, Configurações e indicadores do dashboard) |
 | 6 | Multi-tenancy (validação do isolamento com RLS) | Pendente |
 | 7 | Cadastro de processos | Pendente |
 | 8 | Upload de documentos | Pendente |
@@ -139,14 +139,13 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 ## 7. Estado atual
 
-**Atualizado em: 08/10/2026 (Fase 5A entregue)**
+**Atualizado em: 08/10/2026 (Fase 5B, parte 1 entregue)**
 
-- Interface completa com **dados fictícios**. As telas ainda leem de `lib/mock-*.ts`.
-- A raiz do site (`/`) redireciona para `/dashboard`. A pasta `components/landing/` ficou sem uso e pode ser apagada.
-- **Fase 4 concluída e conferida no Supabase real:** projeto `lexia` (região São Paulo) com as 9 tabelas, RLS ligado, dados fictícios carregados (128 processos, 768 documentos, 640 movimentações, 128 análises, 1152 itens de análise, 256 consultas, 3 prazos, 5 pessoas) e os 24 testes de isolamento com ✅ OK. Os arquivos estão em `supabase/` (`01_schema.sql`, `02_dados_ficticios.sql`, `03_teste_isolamento.sql`).
-- **Fase 5A (login): código entregue em 08/10/2026**, ainda não testado em produção. Inclui `proxy.ts` (protege as rotas), página `/login`, botão Sair no menu lateral e os clientes do Supabase em `lib/supabase/`. O `package.json` e o `pnpm-lock.yaml` ganharam `@supabase/supabase-js` e `@supabase/ssr`. As telas do painel **ainda leem os dados fictícios** (isso é a 5B).
-- Variáveis de ambiente usadas: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (chave pública `sb_publishable_...`). Elas ficam **só na Vercel** (Settings → Environment Variables), nunca no GitHub. Sem elas o site responde erro 500 de propósito (fecha em vez de abrir sem proteção).
-- Pendência de organização: a pasta do SQL no GitHub está com o nome `superbase` (com "r"); o correto é `supabase`.
+- **Fase 5A (login) concluída.** Login por e-mail e senha, rotas protegidas por `proxy.ts`, botão Sair. Variáveis na Vercel: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (só na Vercel, nunca no GitHub; sem elas o site responde 500 de propósito). O login de Caio está vinculado ao perfil `Caio Henrique` (Administrador, escritório Silva & Associados).
+- **Fase 5B em andamento (entregue em 08/10/2026, ainda não testado em produção).** Estas telas agora leem do Supabase, com o RLS filtrando pelo usuário logado: **Processos** (lista), **Processo individual** (Resumo, Documentos, Análise, Consulta, Histórico), **Documentos**, **Análises** e a tabela **Processos recentes** do dashboard. Todas as consultas ficam em `lib/data/queries.ts`.
+- **Ainda usam dados fictícios (`lib/mock-*.ts`):** nome do escritório e usuário no menu lateral e na barra superior (`currentUser`, `office`), Equipe, Configurações, e no dashboard os 4 indicadores, os próximos prazos e o gráfico de atividade. A data da barra superior está fixa em "07 de outubro de 2026".
+- `lib/mock-process-details.ts` e a lista `processes` de `lib/mock-data.ts` **não são mais usados** por nenhuma tela; podem ser apagados na limpeza final.
+- Pendências de organização: a pasta do SQL no GitHub se chama `superbase` (com "r"); o correto é `supabase`. A pasta `components/landing/` está sem uso e pode ser apagada.
 
 ### Decisões tomadas
 
@@ -163,6 +162,12 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 - **Login por e-mail e senha** (`signInWithPassword`), sem cadastro público: contas são criadas pelo painel do Supabase/convite.
 - A chave `sb_publishable_...` é pública por desenho (vai no navegador); a proteção dos dados é do RLS. `sb_secret_`/`service_role` jamais.
 
+- **Nenhuma consulta filtra por escritório no código.** Quem garante o isolamento é o RLS. As páginas usam `lib/supabase/server.ts` (que envia o login do usuário ao banco). Nunca trocar por uma chave que ignore o RLS.
+- **Link antigo de processo (`/processos/proc-1`) agora dá "não encontrado"**: os processos reais têm id UUID.
+- **Fonte só aparece se for real:** uma informação sem documento/página no banco é mostrada sem o selo "Fonte". O Resumo não inventa mais fonte.
+- Erros de carregamento caem em `app/(app)/error.tsx` (mensagem amigável + "Tentar novamente"); o detalhe fica nos logs da Vercel.
+- Listas (Processos, Documentos) ainda carregam tudo e filtram/paginam no navegador; o Supabase devolve no máximo 1.000 linhas por consulta. Quando passar disso, migrar para busca e paginação no banco.
+
 ### Plano da Fase 5 (em duas partes)
 
 - **5A, login:** instalar `@supabase/supabase-js` e `@supabase/ssr`; variáveis de ambiente `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` (local e Vercel); página `/login`; proteção das rotas do painel (quem não está logado vai para `/login`); botão Sair; vincular o login de Caio ao perfil `Caio Henrique`.
@@ -170,11 +175,10 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 ### Próximos passos
 
-1. Conferir que o usuário de Caio existe no Supabase (Authentication → Users) e que o SQL de vínculo foi rodado (o perfil `Caio Henrique` deve ficar com `auth_user_id` preenchido).
-2. Cadastrar as duas variáveis de ambiente na Vercel (Production, Preview e Development).
-3. Subir os arquivos da 5A para o GitHub (a Vercel republica sozinha) e testar: sem login, `/dashboard` deve levar a `/login`; com login correto, abre o painel; "Sair" volta ao `/login`.
-4. Renomear a pasta `superbase` para `supabase` e apagar `components/landing/`.
-5. Só depois: **5B**, trocando `lib/mock-*.ts` por consultas ao Supabase, tela por tela, começando por Processos.
+1. Subir os arquivos da 5B e testar em produção: Processos deve mostrar os 128 processos; abrir um processo deve mostrar documentos, análise, consulta e histórico do banco; Documentos e Análises devem listar dados reais.
+2. **5B-2:** trocar `currentUser` e `office` (menu lateral, barra superior, Configurações) pelos dados reais do usuário logado e do escritório; migrar Equipe (profiles) e, no dashboard, indicadores e próximos prazos (`deadlines`).
+3. Limpeza: renomear `superbase` para `supabase`, apagar `components/landing/`, `lib/mock-process-details.ts` e o que sobrar de `lib/mock-*.ts`.
+4. Depois: Fase 6 (validar isolamento com um segundo escritório) e Fase 7 (cadastro de processos).
 
 ---
 
@@ -193,7 +197,9 @@ app/
 components/                componentes por área (dashboard, process, processes, team, layout, login, ui...)
 lib/
   supabase/client.ts       cliente do Supabase para o navegador (chave pública)
+  supabase/server.ts       cliente do Supabase para o servidor (envia o login; o RLS filtra)
   supabase/proxy.ts        renova a sessão e decide quem entra (usado pelo proxy.ts)
+  data/queries.ts          TODAS as consultas ao banco (processos, documentos, análises...)
   types.ts                 tipos do domínio (já com officeId; espelham as futuras tabelas)
   mock-data.ts             processos, prazos, usuário e escritório fictícios
   mock-process-details.ts  documentos, histórico, análise e consulta fictícios
@@ -205,7 +211,7 @@ supabase/                  (rodados à mão no SQL Editor do Supabase, nesta ord
   03_teste_isolamento.sql  testes de isolamento entre escritórios
 ```
 
-Os arquivos `lib/mock-*.ts` serão substituídos por consultas ao Supabase a partir da Fase 5. Nunca colocar processos reais neles.
+Os arquivos `lib/mock-*.ts` estão sendo substituídos por consultas ao Supabase (Fase 5B). Nunca colocar processos reais neles.
 
 ---
 

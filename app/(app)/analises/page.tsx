@@ -4,18 +4,19 @@ import { CheckCircle2, Clock, FileText, Hourglass } from 'lucide-react'
 import { AnalysisList } from '@/components/analyses/analysis-list'
 import { StatCard } from '@/components/dashboard/stat-card'
 import { PageHeader } from '@/components/page-header'
-import { getAnalysisOverview } from '@/lib/mock-process-details'
+import { getAnalysisOverview } from '@/lib/data/queries'
 
 export const metadata: Metadata = { title: 'Análises' }
 
-export default function AnalisesPage() {
-  const analyses = getAnalysisOverview()
+export default async function AnalisesPage() {
+  const analyses = await getAnalysisOverview()
 
   // Os números dos cartões são calculados a partir da própria lista.
   const count = (status: string) => analyses.filter((analysis) => analysis.status === status).length
   const totalDocuments = analyses.reduce((sum, analysis) => sum + analysis.totalDocuments, 0)
   const analyzedDocuments = analyses.reduce((sum, analysis) => sum + analysis.analyzedDocuments, 0)
-  const percent = Math.round((analyzedDocuments / totalDocuments) * 100)
+  // Se ainda não há documentos, evita dividir por zero.
+  const percent = totalDocuments === 0 ? 0 : Math.round((analyzedDocuments / totalDocuments) * 100)
 
   return (
     <>

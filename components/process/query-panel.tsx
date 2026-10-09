@@ -27,17 +27,19 @@ export function QueryPanel({ turns }: { turns: ConversationTurn[] }) {
       </section>
 
       <section className="rounded-lg border border-border bg-card p-5">
-        <h2 className="text-[15px] font-semibold text-foreground">Exemplo de resposta</h2>
+        <h2 className="text-[15px] font-semibold text-foreground">Consultas anteriores</h2>
         <div className="mt-4 divide-y divide-line">
-          {turns.map((turn) => (
-            <div key={turn.question} className="py-4 first:pt-0 last:pb-0">
+          {turns.map((turn, index) => (
+            <div key={`${turn.question}-${index}`} className="py-4 first:pt-0 last:pb-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-subtle">Pergunta</p>
               <p className="mt-1 text-[13px] font-medium text-foreground">{turn.question}</p>
               <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.1em] text-subtle">Resposta</p>
               <p className="mt-1 text-[13px] leading-6 text-foreground">{turn.answer}</p>
-              <div className="mt-2">
-                <SourceRef source={turn.source} />
-              </div>
+              {turn.source && (
+                <div className="mt-2">
+                  <SourceRef source={turn.source} />
+                </div>
+              )}
             </div>
           ))}
         </div>

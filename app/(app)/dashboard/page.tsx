@@ -7,11 +7,14 @@ import { StatCard } from '@/components/dashboard/stat-card'
 import { UpcomingDeadlines } from '@/components/dashboard/upcoming-deadlines'
 import { NewProcessButton } from '@/components/new-process-button'
 import { PageHeader } from '@/components/page-header'
-import { processes } from '@/lib/mock-data'
+import { getRecentProcesses } from '@/lib/data/queries'
 
 export const metadata: Metadata = { title: 'Visão geral' }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  // Os 5 processos mais recentes do banco + o total do escritório.
+  const { processes, total } = await getRecentProcesses(5)
+
   return (
     <>
       <PageHeader
@@ -28,8 +31,7 @@ export default function DashboardPage() {
         <StatCard value="7" label="Pendências" note="3 com prazo nesta semana" icon={CheckCircle2} />
       </section>
 
-      {/* Os 5 primeiros da lista são os mais recentes */}
-      <RecentProcesses processes={processes.slice(0, 5)} total={processes.length} />
+      <RecentProcesses processes={processes} total={total} />
 
       <section className="mt-6 grid gap-6 lg:grid-cols-[1.3fr_1fr]">
         <ActivityChart />
