@@ -21,7 +21,7 @@ export const maxDuration = 60
 interface ProcessPageProps {
   // No Next.js 16, "params" e "searchParams" chegam como Promise e precisam de "await".
   params: Promise<{ id: string }>
-  searchParams: Promise<{ cadastrado?: string }>
+  searchParams: Promise<{ cadastrado?: string; pdf?: string }>
 }
 
 export async function generateMetadata({ params }: ProcessPageProps): Promise<Metadata> {
@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: ProcessPageProps): Promise<Me
 
 export default async function ProcessPage({ params, searchParams }: ProcessPageProps) {
   const { id } = await params
-  const { cadastrado } = await searchParams
+  const { cadastrado, pdf } = await searchParams
   const [data, session] = await Promise.all([getProcessPage(id), getSession()])
 
   // Se o processo não existe (ou é de outro escritório), mostra a página "não encontrado".
@@ -66,6 +66,11 @@ export default async function ProcessPage({ params, searchParams }: ProcessPageP
       {cadastrado === '1' && (
         <p role="status" className="mt-6 rounded-lg border border-olive/40 bg-muted px-4 py-3 text-sm text-foreground">
           Processo cadastrado com sucesso. Documentos e análise poderão ser adicionados nas próximas etapas.
+        </p>
+      )}
+      {cadastrado === '1' && pdf === 'erro' && (
+        <p role="alert" className="mt-3 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          O processo foi cadastrado, mas não foi possível anexar o PDF automaticamente. Envie o arquivo de novo em &quot;Enviar documento&quot;.
         </p>
       )}
 

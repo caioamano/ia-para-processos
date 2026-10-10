@@ -3,11 +3,14 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
 import { PageHeader } from '@/components/page-header'
-import { NewProcessForm } from '@/components/processes/new-process-form'
+import { NewProcessFlow } from '@/components/processes/new-process-flow'
 import { getSession, getTeamMembers } from '@/lib/data/queries'
 import { todayInSaoPaulo } from '@/lib/format'
 
 export const metadata: Metadata = { title: 'Novo processo' }
+
+// A leitura do PDF pelo Gemini pode levar dezenas de segundos (o padrão da Vercel é 10).
+export const maxDuration = 60
 
 export default async function NovoProcessoPage() {
   const [session, members] = await Promise.all([getSession(), getTeamMembers()])
@@ -34,7 +37,8 @@ export default async function NovoProcessoPage() {
 
       <div className="mt-8 max-w-3xl">
         {canCreate && session ? (
-          <NewProcessForm
+          <NewProcessFlow
+            officeId={session.office.id}
             // Só pessoas com acesso ativo podem ser responsáveis.
             members={members.filter((member) => member.status === 'Ativo').map(({ id, name, role }) => ({ id, name, role }))}
             currentUserId={session.user.id}

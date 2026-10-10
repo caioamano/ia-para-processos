@@ -3,10 +3,46 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+import { registerDocument } from '@/app/(app)/processos/[id]/documentos-actions'
 import { getSession } from '@/lib/data/queries'
+import { documentStoragePath, UUID_PATTERN } from '@/lib/documents'
 import { todayInSaoPaulo } from '@/lib/format'
 import { EMPTY_FORM_VALUES, validateProcessForm, type FormState } from '@/lib/process-form'
+import { draftStoragePath } from '@/lib/process-prefill'
 import { createClient } from '@/lib/supabase/server'
+
+// Quando o processo nasceu de um PDF ("Cadastrar a partir do PDF"), o arquivo estava num
+// rascunho. Aqui ele é COPIADO para o caminho definitivo, registrado como documento do processo
+// (com a mesma conferência de sempre) e o rascunho é apagado. Se algo falhar, o processo já
+// existe: devolve false e a tela avisa para enviar o PDF de novo.
+async function attachDraftPdf(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  officeId: string,
+  processId: string,
+  draftId: string,
+  fileName: string,
+) {
+  const draftPath = draftStoragePath(officeId, draftId)
+  const documentId = crypto.randomUUID()
+
+  const { error: copyError } = await supabase.storage
+    .from('documents')
+    .copy(draftPath, documentStoragePath(officeId, processId, documentId))
+  if (copyError) {
+    console.error('Falha ao copiar o rascunho para o processo:', copyError.message)
+    return false
+  }
+
+  const registered = await registerDocument(processId, documentId, fileName)
+  if (!registered.ok) {
+    console.error('Falha ao registrar o PDF do rascunho:', registered.error)
+    return false
+  }
+
+  // Limpeza do rascunho (melhor esforço: se falhar, só sobra um arquivo sem uso).
+  await supabase.storage.from('documents').remove([draftPath])
+  return true
+}
 
 // Esta função roda no SERVIDOR quando o formulário é enviado.
 // Três camadas protegem o cadastro:
@@ -64,8 +100,17 @@ export async function createProcess(_previous: FormState, formData: FormData): P
     return { error: 'Não foi possível cadastrar o processo. Tente novamente.', values: checked.values }
   }
 
+  // Veio de "Cadastrar a partir do PDF"? Anexa o PDF do rascunho ao processo recém-criado.
+  const draftId = formData.get('draftId')
+  const draftFileName = formData.get('draftFileName')
+  let pdfAttached: boolean | null = null
+  if (typeof draftId === 'string' && UUID_PATTERN.test(draftId)) {
+    const fileName = typeof draftFileName === 'string' && draftFileName.trim() !== '' ? draftFileName : 'documento.pdf'
+    pdfAttached = await attachDraftPdf(supabase, session.office.id, created.id, draftId, fileName)
+  }
+
   // As listas guardam dados em cache: avisa que mudaram. Depois abre o processo novo.
   revalidatePath('/processos')
   revalidatePath('/dashboard')
-  redirect(`/processos/${created.id}?cadastrado=1`)
+  redirect(`/processos/${created.id}?cadastrado=1${pdfAttached === false ? '&pdf=erro' : ''}`)
 }
