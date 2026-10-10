@@ -24,7 +24,16 @@ export type ExtractionResult =
       durationMs: number
       tokens: { input: number | null; output: number | null }
     }
-  | { ok: false; error: string }
+  // detail: motivo técnico, só para a rota de teste do Administrador (nunca mostrar a usuário comum).
+  | { ok: false; error: string; detail?: string }
+
+// Texto curto do erro técnico, com a chave de API apagada caso apareça por engano.
+function technicalDetail(error: unknown) {
+  const key = process.env.GEMINI_API_KEY?.trim()
+  let text = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+  if (key) text = text.split(key).join('***')
+  return text.slice(0, 600)
+}
 
 // Hoje em Brasília (AAAA-MM-DD).
 export function todayInBrazil() {
@@ -83,7 +92,11 @@ export async function extractProcessFromPdf(bytes: Uint8Array, totalPages: numbe
   } catch (error) {
     // O detalhe técnico fica nos logs da Vercel; a tela mostra só o essencial.
     console.error('Falha na leitura do PDF pelo Gemini:', error)
-    return { ok: false, error: 'O Gemini não conseguiu ler o documento agora. Tente de novo em instantes.' }
+    return {
+      ok: false,
+      error: 'O Gemini não conseguiu ler o documento agora. Tente de novo em instantes.',
+      detail: technicalDetail(error),
+    }
   }
 
   if (!text) return { ok: false, error: 'O Gemini não devolveu resposta para este documento.' }

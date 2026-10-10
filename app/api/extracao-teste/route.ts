@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { getSession } from '@/lib/data/queries'
 import { UUID_PATTERN } from '@/lib/documents'
+import { geminiModel } from '@/lib/gemini'
 import { extractProcessFromPdf } from '@/lib/gemini-extract'
 import { createClient } from '@/lib/supabase/server'
 
@@ -50,7 +51,13 @@ export async function GET(request: Request) {
   }
 
   const result = await extractProcessFromPdf(new Uint8Array(await blob.arrayBuffer()), document.pages)
-  if (!result.ok) return NextResponse.json({ ...result, documento: { id: document.id, nome: document.name } }, { status: 502 })
+  if (!result.ok) {
+    // "detalhe" é o motivo técnico: só aparece aqui, nesta rota de Administrador.
+    return NextResponse.json(
+      { ok: false, error: result.error, detalhe: result.detail ?? null, modelo: geminiModel(), documento: { id: document.id, nome: document.name } },
+      { status: 502 },
+    )
+  }
 
   return NextResponse.json({
     ok: true,
