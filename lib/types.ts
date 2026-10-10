@@ -75,6 +75,8 @@ export interface ProcessDocument {
   size: string
   uploadedAt: string
   status: DocumentStatus
+  // Verdadeiro quando há um PDF guardado no Storage (os documentos fictícios do início não têm).
+  hasFile: boolean
 }
 
 export interface TimelineEvent {

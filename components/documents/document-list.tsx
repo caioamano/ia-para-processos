@@ -71,7 +71,7 @@ export function DocumentList({ documents }: { documents: OfficeDocument[] }) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px] text-left">
+        <table className="w-full min-w-[880px] text-left">
           <thead className="bg-muted">
             <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.1em] text-subtle">
               <th className="px-5 py-3 font-medium">Documento</th>
@@ -80,6 +80,7 @@ export function DocumentList({ documents }: { documents: OfficeDocument[] }) {
               <th className="px-4 py-3 font-medium">Tamanho</th>
               <th className="px-4 py-3 font-medium">Enviado em</th>
               <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Arquivo</th>
             </tr>
           </thead>
           <tbody>
@@ -101,11 +102,25 @@ export function DocumentList({ documents }: { documents: OfficeDocument[] }) {
                 <td className="px-4 py-4">
                   <DocumentStatusBadge status={document.status} />
                 </td>
+                <td className="px-4 py-4">
+                  {document.hasFile ? (
+                    <a
+                      href={`/documentos/${document.id}/arquivo`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium text-link hover:underline"
+                    >
+                      Abrir PDF
+                    </a>
+                  ) : (
+                    <span className="text-xs text-subtle">Sem arquivo</span>
+                  )}
+                </td>
               </tr>
             ))}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-sm text-subtle">
+                <td colSpan={7} className="px-5 py-10 text-center text-sm text-subtle">
                   Nenhum documento encontrado.
                 </td>
               </tr>

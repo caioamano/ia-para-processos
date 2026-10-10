@@ -126,6 +126,7 @@ interface DocumentRow {
   file_name: string
   pages: number
   size_bytes: number
+  storage_path: string | null
   status: DocumentStatus
   uploaded_at: string
 }
@@ -177,6 +178,7 @@ function toDocument(row: DocumentRow): ProcessDocument {
     size: formatBytes(Number(row.size_bytes)),
     uploadedAt: formatTimestampDate(row.uploaded_at),
     status: row.status,
+    hasFile: row.storage_path != null,
   }
 }
 
@@ -196,7 +198,7 @@ export const getProcessPage = cache(async (id: string): Promise<ProcessPageData 
       .maybeSingle(),
     supabase
       .from('documents')
-      .select('id, office_id, process_id, name, file_name, pages, size_bytes, status, uploaded_at')
+      .select('id, office_id, process_id, name, file_name, pages, size_bytes, storage_path, status, uploaded_at')
       .eq('process_id', id)
       .order('uploaded_at', { ascending: true })
       .order('name', { ascending: true }),
@@ -284,7 +286,7 @@ export async function getOfficeDocuments(): Promise<OfficeDocument[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('documents')
-    .select('id, office_id, process_id, name, file_name, pages, size_bytes, status, uploaded_at, processes(number, client)')
+    .select('id, office_id, process_id, name, file_name, pages, size_bytes, storage_path, status, uploaded_at, processes(number, client)')
     .order('uploaded_at', { ascending: false })
     .order('name', { ascending: true })
   if (error) fail('os documentos', error)

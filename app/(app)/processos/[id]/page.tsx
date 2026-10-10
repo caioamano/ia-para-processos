@@ -13,7 +13,10 @@ import { SummaryPanel } from '@/components/process/summary-panel'
 import { StatusBadge } from '@/components/status-badge'
 import { Tabs } from '@/components/tabs'
 import { UploadDocumentButton } from '@/components/upload-document-button'
-import { getProcessPage } from '@/lib/data/queries'
+import { getProcessPage, getSession } from '@/lib/data/queries'
+
+// A conferência de um PDF grande pode levar alguns segundos (a Vercel limita o padrão a 10).
+export const maxDuration = 60
 
 interface ProcessPageProps {
   // No Next.js 16, "params" e "searchParams" chegam como Promise e precisam de "await".
@@ -30,10 +33,10 @@ export async function generateMetadata({ params }: ProcessPageProps): Promise<Me
 export default async function ProcessPage({ params, searchParams }: ProcessPageProps) {
   const { id } = await params
   const { cadastrado } = await searchParams
-  const data = await getProcessPage(id)
+  const [data, session] = await Promise.all([getProcessPage(id), getSession()])
 
   // Se o processo não existe (ou é de outro escritório), mostra a página "não encontrado".
-  if (!data) notFound()
+  if (!data || !session) notFound()
 
   const { process: currentProcess, details, documents, timeline, analysis, conversation } = data
 
@@ -54,7 +57,7 @@ export default async function ProcessPage({ params, searchParams }: ProcessPageP
           action={
             <div className="flex items-center gap-3">
               <StatusBadge status={currentProcess.status} />
-              <UploadDocumentButton />
+              <UploadDocumentButton officeId={session.office.id} processId={currentProcess.id} />
             </div>
           }
         />
@@ -67,8 +70,7 @@ export default async function ProcessPage({ params, searchParams }: ProcessPageP
       )}
 
       <DemoNotice>
-        Os dados vêm do banco, mas são fictícios, e ainda não há leitura automática de documentos nem envio de
-        arquivos.
+        Os dados vêm do banco, mas são fictícios, e ainda não há leitura automática dos documentos enviados.
       </DemoNotice>
 
       <div className="mt-6">
@@ -82,7 +84,7 @@ export default async function ProcessPage({ params, searchParams }: ProcessPageP
             {
               id: 'documentos',
               label: `Documentos (${documents.length})`,
-              content: <DocumentsPanel documents={documents} />,
+              content: <DocumentsPanel documents={documents} canDelete={session.user.role !== 'Estagiário'} />,
             },
             {
               id: 'analise',

@@ -95,6 +95,7 @@ export function getDocuments(process: Process): ProcessDocument[] {
     size: `${(template.pages * 0.12).toFixed(1).replace('.', ',')} MB`,
     uploadedAt: formatDate(daysBefore(base, template.daysAgo)),
     status: documentStatusPatterns[process.status][index],
+    hasFile: false,
   }))
 }
 

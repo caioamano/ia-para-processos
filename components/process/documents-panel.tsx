@@ -1,11 +1,12 @@
 import { DocumentStatusBadge } from '@/components/document-status-badge'
+import { DeleteDocumentButton } from '@/components/process/delete-document-button'
 import type { ProcessDocument } from '@/lib/types'
 
-export function DocumentsPanel({ documents }: { documents: ProcessDocument[] }) {
+export function DocumentsPanel({ documents, canDelete }: { documents: ProcessDocument[]; canDelete: boolean }) {
   return (
     <section className="rounded-lg border border-border bg-card">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left">
+        <table className="w-full min-w-[720px] text-left">
           <thead className="bg-muted">
             <tr className="border-b border-line text-[10px] font-semibold uppercase tracking-[0.1em] text-subtle">
               <th className="px-5 py-3 font-medium">Documento</th>
@@ -13,12 +14,13 @@ export function DocumentsPanel({ documents }: { documents: ProcessDocument[] }) 
               <th className="px-4 py-3 font-medium">Tamanho</th>
               <th className="px-4 py-3 font-medium">Enviado em</th>
               <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Arquivo</th>
             </tr>
           </thead>
           <tbody>
             {documents.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-10 text-center text-[13px] text-subtle">
+                <td colSpan={6} className="px-5 py-10 text-center text-[13px] text-subtle">
                   Nenhum documento enviado ainda.
                 </td>
               </tr>
@@ -34,6 +36,25 @@ export function DocumentsPanel({ documents }: { documents: ProcessDocument[] }) 
                 <td className="px-4 py-4 text-subtle">{document.uploadedAt}</td>
                 <td className="px-4 py-4">
                   <DocumentStatusBadge status={document.status} />
+                </td>
+                <td className="px-4 py-4">
+                  <div className="flex flex-col items-start gap-1">
+                    {document.hasFile ? (
+                      <a
+                        href={`/documentos/${document.id}/arquivo`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-medium text-link hover:underline"
+                      >
+                        Abrir PDF
+                      </a>
+                    ) : (
+                      <span className="text-xs text-subtle" title="Documento de exemplo, sem arquivo guardado.">
+                        Sem arquivo
+                      </span>
+                    )}
+                    {canDelete && <DeleteDocumentButton documentId={document.id} name={document.name} />}
+                  </div>
                 </td>
               </tr>
             ))}
