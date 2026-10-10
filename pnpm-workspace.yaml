@@ -3,3 +3,9 @@ pmOnFail: ignore
 minimumReleaseAgeExclude:
   - '@next/*'
   - next
+
+# Pacotes que têm script de instalação e que NÃO precisam rodá-lo (o projeto funciona sem).
+# Sem isto o pnpm falha na Vercel com ERR_PNPM_IGNORED_BUILDS.
+allowBuilds:
+  '@google/genai': false
+  protobufjs: false
