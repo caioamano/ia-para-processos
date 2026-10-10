@@ -8,10 +8,15 @@ import { GoogleGenAI } from '@google/genai'
 // Variáveis na Vercel (Settings > Environment Variables):
 //   GEMINI_API_KEY  (obrigatória) chave criada no Google AI Studio
 //   GEMINI_MODEL    (opcional)    nome do modelo; se vazio, usa o padrão abaixo
+//   GEMINI_FALLBACK_MODEL (opcional) modelo reserva, usado na 3ª tentativa se o principal estiver sobrecarregado
 export const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash'
 
 export function geminiModel() {
   return process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL
+}
+
+export function geminiFallbackModel() {
+  return process.env.GEMINI_FALLBACK_MODEL?.trim() || null
 }
 
 export function geminiConfigured() {
