@@ -124,9 +124,9 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 | 4 | Supabase (projeto, tabelas com `office_id`, RLS, dados fictícios) | Concluída |
 | 5 | Autenticação (e telas passam a ler do banco) | **Concluída** (5A login; 5B todas as telas do painel leem do Supabase; só o gráfico de atividade do dashboard segue ilustrativo) |
 | 6 | Multi-tenancy (validação do isolamento com RLS) | **Concluída** (2º escritório; conferência SQL 35/35 ✅ e teste pelo site com os dois logins, em 09/10/2026) |
-| 7 | Cadastro de processos | **Em andamento** (código e teste de segurança entregues em 09/10/2026; falta testar no site) |
-| 8 | Upload de documentos | **Em andamento** (código, SQL 07 e teste 08 entregues em 10/10/2026; falta rodar o 07 e testar no site) |
-| 9 | Gemini (primeira função: **cadastrar o processo a partir do PDF**; depois análise) | Pendente |
+| 7 | Cadastro de processos | **Concluída** (testada no site por Caio em 10/10/2026) |
+| 8 | Upload de documentos | **Concluída** (envio de PDF testado no site por Caio em 10/10/2026) |
+| 9 | Gemini (primeira função: **cadastrar o processo a partir do PDF**; depois análise) | **Em andamento** (9A conexão entregue em 10/10/2026; falta configurar a chave e testar) |
 | 10 | Análise de documentos | Pendente |
 | 11 | Perguntas sobre processos | Pendente |
 | 12 | Referências/páginas | Pendente |
@@ -139,7 +139,7 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 ## 7. Estado atual
 
-**Atualizado em: 10/10/2026 (Fase 6 concluída; Fases 7 e 8 entregues, aguardando teste)**
+**Atualizado em: 10/10/2026 (Fases 1 a 8 concluídas; Fase 9A entregue, aguardando teste)**
 
 - **Fase 5A (login) concluída.** Login por e-mail e senha, rotas protegidas por `proxy.ts`, botão Sair. Variáveis na Vercel: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (só na Vercel, nunca no GitHub; sem elas o site responde 500 de propósito). O login de Caio está vinculado ao perfil `Caio Henrique` (Administrador, escritório Silva & Associados).
 - **Fase 5B concluída (08/10/2026).** Todas as telas do painel leem do Supabase, com o RLS filtrando pelo usuário logado: Processos, Processo individual, Documentos, Análises, Equipe, Configurações (nome do escritório), menu lateral e barra superior (usuário, função, escritório e data de hoje) e dashboard (processos recentes, 4 indicadores e próximos prazos). Todas as consultas ficam em `lib/data/queries.ts`. Testada e funcionando em produção (09/10/2026).
@@ -149,11 +149,13 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 - Arquivos que **não são mais usados por nenhuma tela** e podem ser apagados: `lib/mock-data.ts`, `lib/mock-team.ts`, `lib/mock-process-details.ts` (apague os três juntos, pois um importa o outro), além de `components/landing/`.
 
 - **Fase 6 (09/10/2026):** o escritório fictício Ribeiro & Lima Advocacia existe (8 processos, 3 pessoas) e o login da administradora `Marcela Ribeiro` foi criado e vinculado. A conferência `05_conferir_isolamento.sql` com os dois logins reais passou em **35 de 35 testes** (cada um vê todos os dados do próprio escritório e nenhum do outro; tentativas de alteração entre escritórios afetam 0 linhas; visitante sem login é bloqueado). O teste pelo site com os dois logins também passou: cada um só vê o próprio escritório e abrir por link direto o processo do outro dá "não encontrado". **Fase 6 concluída.** A pasta do SQL já foi renomeada para `supabase`.
-- **Fase 7 (entregue em 09/10/2026, aguardando teste no site):** botão **Novo processo** (só para Administrador e Advogado) abre `/processos/novo`, com formulário de número (formato CNJ, aceita só os 20 dígitos), cliente, tipo, situação, responsável, parte contrária, juízo, valor da causa e data de distribuição. A gravação roda no servidor (`app/(app)/processos/novo/actions.ts`): confere login, função e campos; o escritório vem da sessão, nunca do formulário; o RLS e a chave composta do banco são a segunda barreira. Número repetido no escritório, responsável de outro escritório e falta de permissão viram mensagens amigáveis. Ao cadastrar, abre o processo novo, cujas abas vazias mostram "ainda não há...". As regras do formulário estão em `lib/process-form.ts`. O teste de segurança da escrita é `supabase/06_testar_cadastro.sql` (13 testes; apaga o que cria).
+- **Fase 7 (concluída; testada no site em 10/10/2026):** botão **Novo processo** (só para Administrador e Advogado) abre `/processos/novo`, com formulário de número (formato CNJ, aceita só os 20 dígitos), cliente, tipo, situação, responsável, parte contrária, juízo, valor da causa e data de distribuição. A gravação roda no servidor (`app/(app)/processos/novo/actions.ts`): confere login, função e campos; o escritório vem da sessão, nunca do formulário; o RLS e a chave composta do banco são a segunda barreira. Número repetido no escritório, responsável de outro escritório e falta de permissão viram mensagens amigáveis. Ao cadastrar, abre o processo novo, cujas abas vazias mostram "ainda não há...". As regras do formulário estão em `lib/process-form.ts`. O teste de segurança da escrita é `supabase/06_testar_cadastro.sql` (13 testes; apaga o que cria).
 - **Ainda não valida o dígito verificador do CNJ** (só o formato); os números fictícios do desenvolvimento não passariam. Avaliar antes do piloto.
 
-- **Fase 8 (entregue em 10/10/2026, aguardando teste):** botão **Enviar documento** na tela do processo (qualquer função envia; vários PDFs de uma vez, até 50 MB cada). O navegador envia o PDF **direto para o Supabase Storage** (a Vercel limita o corpo de um pedido a ~4,5 MB, pouco para um processo) na pasta `<escritório>/<processo>/<documento>.pdf`; em seguida o servidor (`app/(app)/processos/[id]/documentos-actions.ts`) baixa o arquivo, confere que é PDF de verdade (cabeçalho `%PDF-`), conta as páginas (`pdf-lib`) e só então grava a linha em `documents` (status Pendente, `storage_path` preenchido, `uploaded_by`). PDF inválido é rejeitado e o arquivo apagado. **Abrir PDF** passa por `/documentos/[id]/arquivo`, que confere o login e o escritório e redireciona para um link temporário de 60 segundos. **Excluir** só para Administrador e Advogado (apaga a linha e o arquivo; análises e consultas que citavam o documento ficam sem a fonte). Documentos fictícios do início aparecem como "Sem arquivo". Regras do Storage em `supabase/07_armazenamento_documentos.sql`; teste de segurança em `supabase/08_testar_armazenamento.sql` (17 testes; só linhas de teste, apagadas no fim). PDFs fictícios de exemplo para testes: petição inicial e procuração (Marina Teixeira Souza x Construtora Horizonte, Londrina; fora do repositório, em `exemplos/`).
+- **Fase 8 (concluída; envio de PDF e cadastro testados no site em 10/10/2026):** botão **Enviar documento** na tela do processo (qualquer função envia; vários PDFs de uma vez, até 50 MB cada). O navegador envia o PDF **direto para o Supabase Storage** (a Vercel limita o corpo de um pedido a ~4,5 MB, pouco para um processo) na pasta `<escritório>/<processo>/<documento>.pdf`; em seguida o servidor (`app/(app)/processos/[id]/documentos-actions.ts`) baixa o arquivo, confere que é PDF de verdade (cabeçalho `%PDF-`), conta as páginas (`pdf-lib`) e só então grava a linha em `documents` (status Pendente, `storage_path` preenchido, `uploaded_by`). PDF inválido é rejeitado e o arquivo apagado. **Abrir PDF** passa por `/documentos/[id]/arquivo`, que confere o login e o escritório e redireciona para um link temporário de 60 segundos. **Excluir** só para Administrador e Advogado (apaga a linha e o arquivo; análises e consultas que citavam o documento ficam sem a fonte). Documentos fictícios do início aparecem como "Sem arquivo". Regras do Storage em `supabase/07_armazenamento_documentos.sql`; teste de segurança em `supabase/08_testar_armazenamento.sql` (17 testes; só linhas de teste, apagadas no fim). PDFs fictícios de exemplo para testes: petição inicial e procuração (Marina Teixeira Souza x Construtora Horizonte, Londrina; fora do repositório, em `exemplos/`).
 - **Limites conhecidos da Fase 8:** o plano gratuito do Supabase limita o arquivo a 50 MB; sem barra de progresso do envio; um arquivo enviado por estagiário que o servidor rejeita pode ficar órfão no Storage (a regra de exclusão é só para Administrador/Advogado); documentos protegidos por senha ainda não são tratados (importa na Fase 9).
+
+- **Fase 9A (entregue em 10/10/2026, aguardando teste):** `lib/gemini.ts` (conexão com o Gemini; só roda no servidor, usa o pacote `server-only`; lê `GEMINI_API_KEY` e, opcionalmente, `GEMINI_MODEL`; modelo padrão `gemini-3.5-flash`, trocável pela variável sem mexer no código) e a rota temporária `app/api/gemini-teste/route.ts` (só Administrador logado; pergunta fixa, não envia dado do escritório). Pacotes novos: `@google/genai` e `server-only`. Código ainda **não** lê PDF: isso é a 9B. Revisão do código em 10/10/2026: `tsc` e `pnpm build` passam; telas e ações das Fases 7 e 8 batem com o descrito acima.
 
 ### Decisões tomadas
 
@@ -190,10 +192,10 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 ### Próximos passos
 
-1. **Testar a Fase 7** (formulário Novo processo; `06_testar_cadastro.sql` 13 ✅) — ainda não enviada ao GitHub na data desta nota.
-2. **Fase 8:** rodar `supabase/07_armazenamento_documentos.sql`; rodar `08_testar_armazenamento.sql` (17 ✅); enviar um PDF no site (os exemplos fictícios), ver Páginas/Tamanho/Abrir PDF, testar com a Marcela que o outro escritório não abre o arquivo; testar Excluir.
-3. Limpeza: apagar `lib/mock-data.ts`, `lib/mock-team.ts`, `lib/mock-process-details.ts` e `components/landing/` (os três `mock` juntos).
-4. **Fase 9:** Gemini, começando por "cadastrar a partir do PDF" (ver Decisões).
+1. **Fase 9A (teste):** criar a chave no Google AI Studio, cadastrar `GEMINI_API_KEY` na Vercel (Production, Preview e Development; **nunca** no GitHub), fazer novo deploy e abrir `/api/gemini-teste` logado como Administrador (esperado: `ok: true` e `resposta: funcionando`).
+2. **Fase 9B:** função no servidor que lê o PDF já guardado no Storage, manda ao Gemini com saída em JSON (cada campo com página de origem) e valida o resultado por regra fixa (dígito verificador do CNJ etc.).
+3. **Fase 9C:** botão "Cadastrar a partir do PDF" que abre o formulário de Novo processo já preenchido, com etiqueta "Lido de X, p. N"; o advogado confere e confirma.
+4. Limpeza (pode fazer a qualquer momento, não bloqueia nada): apagar `lib/mock-data.ts`, `lib/mock-team.ts`, `lib/mock-process-details.ts` e `components/landing/` (os três `mock` juntos).
 
 ---
 
@@ -209,11 +211,13 @@ app/
   (app)/                   grupo de rotas com menu lateral + barra superior
     layout.tsx
     dashboard/ processos/ processos/novo/ processos/[id]/ documentos/ analises/ equipe/ configuracoes/
+  api/gemini-teste/route.ts  rota TEMPORÁRIA de teste da chave do Gemini (só Administrador); apagar depois da Fase 9
 components/                componentes por área (dashboard, process, processes, team, layout, login, ui...)
 lib/
   supabase/client.ts       cliente do Supabase para o navegador (chave pública)
   supabase/server.ts       cliente do Supabase para o servidor (envia o login; o RLS filtra)
   supabase/proxy.ts        renova a sessão e decide quem entra (usado pelo proxy.ts)
+  gemini.ts                conexão com o Gemini (só servidor; chave em GEMINI_API_KEY na Vercel)
   data/queries.ts          TODAS as consultas ao banco (sessão, processos, documentos, análises, equipe, dashboard)
   permissions.ts           tabela de permissões exibida na tela Equipe (espelha o RLS)
   process-form.ts          regras do formulário Novo processo (validação; sem React nem banco)
