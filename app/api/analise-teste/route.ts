@@ -8,8 +8,9 @@ import { createClient } from '@/lib/supabase/server'
 
 // Rota TEMPORÁRIA para testar a análise de documentos (Fase 10A) antes de existir o botão (10B).
 // Abra, logado como Administrador:
-//   /api/analise-teste                          -> analisa a 1ª parte (20 páginas) do PDF mais recente
+//   /api/analise-teste                          -> analisa a 1ª parte (10 páginas) do PDF mais recente
 //   /api/analise-teste?documento=<id>&parte=1   -> outro documento e/ou a parte seguinte (0, 1, 2...)
+//   /api/analise-teste?raciocinio=low           -> pede ao Gemini menos "raciocínio" (minimal, low, medium, high) para comparar a velocidade
 // ATENÇÃO: o trecho do PDF é ENVIADO ao Gemini. Use só documentos fictícios enquanto o projeto
 // estiver no plano gratuito. Não grava nada no banco. Apague esta pasta quando a 10B estiver pronta.
 export const maxDuration = 60
@@ -63,7 +64,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: 'Não foi possível baixar o PDF do armazenamento.' }, { status: 500 })
   }
 
-  const result = await analyzePdfChunk(new Uint8Array(await blob.arrayBuffer()), document.pages, range)
+  const thinking = params.get('raciocinio') ?? undefined
+  const result = await analyzePdfChunk(new Uint8Array(await blob.arrayBuffer()), document.pages, range, { thinkingLevel: thinking })
   const info = { id: document.id, nome: document.name, paginas: document.pages }
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error, detalhe: result.detail ?? null, documento: info }, { status: 502 })
@@ -75,6 +77,7 @@ export async function GET(request: Request) {
     partes: plan.map((part) => `${part.index}: páginas ${part.start}-${part.end}`),
     parteAnalisada: range.index,
     modelo: result.model,
+    raciocinio: thinking ?? process.env.GEMINI_THINKING_LEVEL ?? 'padrão do modelo',
     duracaoMs: result.durationMs,
     tokens: result.tokens,
     avisos: result.warnings,

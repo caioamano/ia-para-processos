@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { ApiError } from '@google/genai'
+import { ApiError, ThinkingLevel } from '@google/genai'
 
 import { createGemini, geminiFallbackModel, geminiModel } from '@/lib/gemini'
 
@@ -8,12 +8,26 @@ import { createGemini, geminiFallbackModel, geminiModel } from '@/lib/gemini'
 // está sobrecarregado (mesma regra de lib/gemini-extract.ts, usada pela análise da Fase 10).
 
 export type GeminiJsonResult =
-  | { ok: true; text: string; model: string; tokens: { input: number | null; output: number | null } }
+  | { ok: true; text: string; model: string; tokens: { input: number | null; output: number | null; thinking: number | null } }
   // detail: motivo técnico, só para as rotas de teste do Administrador.
   | { ok: false; error: string; detail: string }
 
 const TOTAL_BUDGET_MS = 52_000
 const RETRY_DELAYS_MS = [2_000, 4_000]
+
+// Nível de "raciocínio" do modelo: mais baixo = resposta mais rápida. Vem do pedido ou da variável
+// opcional GEMINI_THINKING_LEVEL (minimal, low, medium ou high). Vazio ou inválido = padrão do modelo.
+const THINKING_LEVELS: Record<string, ThinkingLevel> = {
+  minimal: ThinkingLevel.MINIMAL,
+  low: ThinkingLevel.LOW,
+  medium: ThinkingLevel.MEDIUM,
+  high: ThinkingLevel.HIGH,
+}
+
+function resolveThinkingLevel(requested?: string) {
+  const wanted = (requested ?? process.env.GEMINI_THINKING_LEVEL ?? '').trim().toLowerCase()
+  return THINKING_LEVELS[wanted]
+}
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -34,11 +48,13 @@ export async function generateJsonFromPdf(options: {
   prompt: string
   schema: unknown
   maxOutputTokens?: number
+  thinkingLevel?: string
 }): Promise<GeminiJsonResult> {
   const startedAt = Date.now()
   const primary = geminiModel()
   const fallback = geminiFallbackModel()
   const models = [primary, primary, fallback && fallback !== primary ? fallback : primary]
+  const thinkingLevel = resolveThinkingLevel(options.thinkingLevel)
   const data = Buffer.from(options.pdf.buffer, options.pdf.byteOffset, options.pdf.byteLength).toString('base64')
 
   let lastError: unknown = null
@@ -62,6 +78,7 @@ export async function generateJsonFromPdf(options: {
           responseJsonSchema: options.schema,
           temperature: 0,
           maxOutputTokens: options.maxOutputTokens ?? 8192,
+          ...(thinkingLevel ? { thinkingConfig: { thinkingLevel } } : {}),
           abortSignal: AbortSignal.timeout(remaining),
         },
       })
@@ -73,6 +90,7 @@ export async function generateJsonFromPdf(options: {
         tokens: {
           input: response.usageMetadata?.promptTokenCount ?? null,
           output: response.usageMetadata?.candidatesTokenCount ?? null,
+          thinking: response.usageMetadata?.thoughtsTokenCount ?? null,
         },
       }
     } catch (error) {

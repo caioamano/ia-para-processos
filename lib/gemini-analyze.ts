@@ -18,13 +18,18 @@ export type AnalyzeChunkResult =
       warnings: string[]
       model: string
       durationMs: number
-      tokens: { input: number | null; output: number | null }
+      tokens: { input: number | null; output: number | null; thinking: number | null }
     }
   | { ok: false; error: string; detail?: string }
 
 // Fase 10: analisa UMA parte (intervalo de páginas) de um PDF e devolve os itens já conferidos.
 // Só roda no servidor e não grava nada: quem chama decide o que fazer com os itens.
-export async function analyzePdfChunk(bytes: Uint8Array, totalPages: number, range: PageRange): Promise<AnalyzeChunkResult> {
+export async function analyzePdfChunk(
+  bytes: Uint8Array,
+  totalPages: number,
+  range: PageRange,
+  options: { thinkingLevel?: string } = {},
+): Promise<AnalyzeChunkResult> {
   const startedAt = Date.now()
 
   let part: Uint8Array | null
@@ -41,6 +46,7 @@ export async function analyzePdfChunk(bytes: Uint8Array, totalPages: number, ran
     system: ANALYSIS_SYSTEM_INSTRUCTION,
     prompt: ANALYSIS_USER_PROMPT,
     schema: ANALYSIS_RESPONSE_SCHEMA,
+    thinkingLevel: options.thinkingLevel,
   })
   if (!result.ok) return { ok: false, error: result.error, detail: result.detail }
 

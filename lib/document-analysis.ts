@@ -7,9 +7,10 @@ export const ANALYSIS_SECTION_NAMES = ['Partes', 'Valores', 'Pedidos', 'Argument
 export type AnalysisSectionName = (typeof ANALYSIS_SECTION_NAMES)[number]
 
 // ---------- Divisão do PDF em partes ----------
-// Documentos grandes são lidos em partes de 20 páginas (cada parte cabe folgada no tempo de uma
-// chamada). Por enquanto o limite é 200 páginas; acima disso a análise pede o PDF menor.
-export const ANALYSIS_CHUNK_PAGES = 20
+// Documentos grandes são lidos em partes de 10 páginas: o tempo da chamada é dominado pelo texto que
+// o Gemini ESCREVE (itens), não pelo que lê, e cada chamada precisa caber nos 60 s da Vercel.
+// (Teste de 10/10/2026: 3 páginas, 20 itens, 50 s.) Por enquanto o limite é 200 páginas.
+export const ANALYSIS_CHUNK_PAGES = 10
 export const ANALYSIS_MAX_PAGES = 200
 
 export interface PageRange {
@@ -37,12 +38,12 @@ REGRAS:
 3. Cada item deve ter:
    - section: exatamente uma destas: Partes, Valores, Pedidos, Argumentos, Decisões, Prazos;
    - label: título curto do item (até 60 caracteres), por exemplo "Autora", "Pedido b", "Danos morais";
-   - value: o conteúdo, de forma objetiva e fiel ao documento, em português, até 350 caracteres;
+   - value: o conteúdo em UMA frase curta, objetiva e fiel ao documento, em português, até 200 caracteres;
    - page: o número da página do ARQUIVO PDF onde a informação está (a primeira página do arquivo é 1, mesmo que a numeração impressa seja outra);
-   - quote: um trecho curto e LITERAL do documento (até 150 caracteres) que comprova o item.
+   - quote: um trecho curto e LITERAL do documento (até 100 caracteres) que comprova o item.
 4. Um fato por item. Não repita o mesmo fato em itens diferentes.
 5. Não dê opinião, não avalie as chances do caso, não dê conselho jurídico e não faça previsões. Só registre o que o documento diz.
-6. Se o trecho não tiver nada para uma seção, não crie itens para ela. Se o trecho não for um documento jurídico, devolva uma lista vazia. No máximo 25 itens.
+6. Se o trecho não tiver nada para uma seção, não crie itens para ela. Se o trecho não for um documento jurídico, devolva uma lista vazia. No máximo 20 itens.
 
 SEÇÕES:
 - Partes: autores, réus, terceiros e advogados que aparecem (com a função de cada um). Só nomes e funções, sem CPF, CNPJ ou endereço.
