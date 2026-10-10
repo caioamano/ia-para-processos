@@ -46,7 +46,8 @@ export async function analyzePdfChunk(
     system: ANALYSIS_SYSTEM_INSTRUCTION,
     prompt: ANALYSIS_USER_PROMPT,
     schema: ANALYSIS_RESPONSE_SCHEMA,
-    thinkingLevel: options.thinkingLevel,
+    // Teste de 10/10/2026: raciocínio low levou 5,5 s contra 21,7 s no padrão, com o mesmo volume de itens.
+    thinkingLevel: options.thinkingLevel ?? process.env.GEMINI_THINKING_LEVEL ?? 'low',
   })
   if (!result.ok) return { ok: false, error: result.error, detail: result.detail }
 

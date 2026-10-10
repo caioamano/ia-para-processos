@@ -1,8 +1,17 @@
 import { DocumentStatusBadge } from '@/components/document-status-badge'
+import { AnalyzeDocumentButton } from '@/components/process/analyze-document-button'
 import { DeleteDocumentButton } from '@/components/process/delete-document-button'
 import type { ProcessDocument } from '@/lib/types'
 
-export function DocumentsPanel({ documents, canDelete }: { documents: ProcessDocument[]; canDelete: boolean }) {
+export function DocumentsPanel({
+  documents,
+  canDelete,
+  canAnalyze,
+}: {
+  documents: ProcessDocument[]
+  canDelete: boolean
+  canAnalyze: boolean
+}) {
   return (
     <section className="rounded-lg border border-border bg-card">
       <div className="overflow-x-auto">
@@ -52,6 +61,9 @@ export function DocumentsPanel({ documents, canDelete }: { documents: ProcessDoc
                       <span className="text-xs text-subtle" title="Documento de exemplo, sem arquivo guardado.">
                         Sem arquivo
                       </span>
+                    )}
+                    {canAnalyze && document.hasFile && (
+                      <AnalyzeDocumentButton documentId={document.id} pages={document.pages} status={document.status} />
                     )}
                     {canDelete && <DeleteDocumentButton documentId={document.id} name={document.name} />}
                   </div>

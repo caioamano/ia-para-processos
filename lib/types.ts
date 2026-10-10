@@ -91,6 +91,8 @@ export interface AnalysisItem {
   value: string
   // Pode ser vazio: o banco permite uma informação sem fonte (ex.: se o documento foi apagado).
   source: SourceReference | null
+  // Trecho literal do documento que comprova o item (análises geradas a partir da Fase 10B).
+  quote?: string | null
 }
 
 export interface AnalysisSection {

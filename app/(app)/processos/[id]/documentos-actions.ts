@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { PDFDocument } from 'pdf-lib'
 
+import { syncAnalysisStatus } from '@/lib/analysis-db'
 import { getSession } from '@/lib/data/queries'
 import {
   cleanFileName,
@@ -126,10 +127,14 @@ export async function deleteDocument(documentId: string): Promise<DocumentAction
     .maybeSingle()
   if (!document) return { ok: false, error: 'Documento não encontrado.' }
 
+  // Os itens da análise que vieram deste documento saem junto: informação sem fonte não fica na análise.
+  await supabase.from('analysis_items').delete().eq('source_document_id', documentId)
+
   const { data: deleted, error } = await supabase.from('documents').delete().eq('id', documentId).select('id')
   if (error || !deleted || deleted.length === 0) {
     return { ok: false, error: 'Não foi possível excluir o documento.' }
   }
+  await syncAnalysisStatus(supabase, document.process_id)
 
   if (document.storage_path) {
     const { error: removeError } = await supabase.storage.from(BUCKET).remove([document.storage_path])

@@ -105,6 +105,11 @@ function normalizeKey(text: string) {
   return removeAccents(text.toLowerCase()).replace(/[^a-z0-9]+/g, ' ').trim()
 }
 
+// Identifica o mesmo fato: mesma seção, título e conteúdo (sem acentos, maiúsculas ou pontuação).
+export function analysisItemKey(section: string, label: string, value: string) {
+  return `${section}|${normalizeKey(label)}|${normalizeKey(value)}`
+}
+
 function matchSection(text: string): AnalysisSectionName | null {
   const wanted = normalizeKey(text)
   return ANALYSIS_SECTION_NAMES.find((name) => normalizeKey(name) === wanted) ?? null
@@ -153,7 +158,7 @@ export function normalizeAnalysis(raw: unknown, range: Pick<PageRange, 'start' |
       continue
     }
 
-    const key = `${section}|${normalizeKey(label)}|${normalizeKey(value)}`
+    const key = analysisItemKey(section, label, value)
     if (seen.has(key)) continue
     seen.add(key)
 
@@ -174,7 +179,7 @@ export function mergeAnalysisItems(parts: AnalysisDraftItem[][]): AnalysisDraftI
   const seen = new Set<string>()
   const merged: AnalysisDraftItem[] = []
   for (const item of parts.flat()) {
-    const key = `${item.section}|${normalizeKey(item.label)}|${normalizeKey(item.value)}`
+    const key = analysisItemKey(item.section, item.label, item.value)
     if (seen.has(key)) continue
     seen.add(key)
     merged.push(item)

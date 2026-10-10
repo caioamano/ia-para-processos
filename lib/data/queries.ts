@@ -145,6 +145,7 @@ interface AnalysisItemRow {
   value: string
   source_document_id: string | null
   source_page: number | null
+  source_quote: string | null
 }
 
 interface ConsultationRow {
@@ -209,7 +210,7 @@ export const getProcessPage = cache(async (id: string): Promise<ProcessPageData 
       .order('event_date', { ascending: false }),
     supabase
       .from('analyses')
-      .select('id, analysis_items(section, position, label, value, source_document_id, source_page)')
+      .select('id, analysis_items(section, position, label, value, source_document_id, source_page, source_quote)')
       .eq('process_id', id)
       .maybeSingle(),
     supabase
@@ -256,6 +257,7 @@ export const getProcessPage = cache(async (id: string): Promise<ProcessPageData 
         label: item.label,
         value: item.value,
         source: sourceOf(item.source_document_id, item.source_page),
+        quote: item.source_quote,
       })),
   })).filter((section) => section.items.length > 0)
 

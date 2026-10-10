@@ -23,6 +23,7 @@ export function AnalysisPanel({ sections }: { sections: AnalysisSection[] }) {
               <div key={`${item.label}-${index}`} className="py-3 first:pt-0 last:pb-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-subtle">{item.label}</p>
                 <p className="mt-1 text-[13px] leading-6 text-foreground">{item.value}</p>
+                {item.quote && <p className="mt-1 text-xs italic leading-5 text-subtle">“{item.quote}”</p>}
                 {item.source && (
                   <div className="mt-2">
                     <SourceRef source={item.source} />

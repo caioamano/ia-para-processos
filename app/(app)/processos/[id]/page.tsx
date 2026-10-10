@@ -75,7 +75,8 @@ export default async function ProcessPage({ params, searchParams }: ProcessPageP
       )}
 
       <DemoNotice>
-        Os dados vêm do banco, mas são fictícios, e ainda não há leitura automática dos documentos enviados.
+        Os dados vêm do banco e os documentos de teste são fictícios. A análise é gerada pelo Gemini a partir do PDF e deve ser
+        conferida na fonte indicada.
       </DemoNotice>
 
       <div className="mt-6">
@@ -89,7 +90,11 @@ export default async function ProcessPage({ params, searchParams }: ProcessPageP
             {
               id: 'documentos',
               label: `Documentos (${documents.length})`,
-              content: <DocumentsPanel documents={documents} canDelete={session.user.role !== 'Estagiário'} />,
+              content: <DocumentsPanel
+                  documents={documents}
+                  canDelete={session.user.role !== 'Estagiário'}
+                  canAnalyze={session.user.role !== 'Estagiário'}
+                />,
             },
             {
               id: 'analise',
