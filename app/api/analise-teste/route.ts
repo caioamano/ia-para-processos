@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/data/queries'
 import { UUID_PATTERN } from '@/lib/documents'
 import { ANALYSIS_MAX_PAGES, planAnalysisChunks } from '@/lib/document-analysis'
+import { geminiModel } from '@/lib/gemini'
 import { analyzePdfChunk } from '@/lib/gemini-analyze'
 import { createClient } from '@/lib/supabase/server'
 
@@ -68,7 +69,7 @@ export async function GET(request: Request) {
   const result = await analyzePdfChunk(new Uint8Array(await blob.arrayBuffer()), document.pages, range, { thinkingLevel: thinking })
   const info = { id: document.id, nome: document.name, paginas: document.pages }
   if (!result.ok) {
-    return NextResponse.json({ ok: false, error: result.error, detalhe: result.detail ?? null, documento: info }, { status: 502 })
+    return NextResponse.json({ ok: false, error: result.error, detalhe: result.detail ?? null, modeloPrincipal: geminiModel(), documento: info }, { status: 502 })
   }
 
   return NextResponse.json({

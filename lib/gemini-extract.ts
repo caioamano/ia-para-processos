@@ -1,8 +1,7 @@
 import 'server-only'
 
-import { ApiError } from '@google/genai'
-
 import { createGemini, geminiFallbackModel, geminiModel } from '@/lib/gemini'
+import { classifyGeminiError, geminiFailureMessage } from '@/lib/gemini-call'
 import { preparePdfForExtraction } from '@/lib/pdf-slice'
 import {
   EXTRACTION_RESPONSE_SCHEMA,
@@ -39,7 +38,7 @@ function technicalDetail(error: unknown) {
 
 // Erros passageiros do Gemini (sobrecarga, limite por minuto, falha interna): vale tentar de novo.
 function isTemporary(error: unknown) {
-  return error instanceof ApiError && [429, 500, 503, 504].includes(error.status)
+  return classifyGeminiError(error).retryable
 }
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -128,9 +127,7 @@ export async function extractProcessFromPdf(bytes: Uint8Array, totalPages: numbe
   if (lastError) {
     return {
       ok: false,
-      error: isTemporary(lastError)
-        ? 'O Gemini está sobrecarregado neste momento. Tente de novo em alguns minutos.'
-        : 'O Gemini não conseguiu ler o documento agora. Tente de novo em instantes.',
+      error: geminiFailureMessage(lastError),
       detail: technicalDetail(lastError),
     }
   }

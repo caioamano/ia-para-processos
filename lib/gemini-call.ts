@@ -31,8 +31,52 @@ function resolveThinkingLevel(requested?: string) {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-function isTemporary(error: unknown) {
-  return error instanceof ApiError && [429, 500, 503, 504].includes(error.status)
+// "Please retry in 2h50m44.5s" -> segundos. null se a mensagem não traz o tempo.
+function parseRetryDelay(message: string) {
+  const match = /retry in (?:(\d+)h)?(?:(\d+)m)?(?:([\d.]+)s)?/i.exec(message)
+  if (!match || (!match[1] && !match[2] && !match[3])) return null
+  return Number(match[1] ?? 0) * 3600 + Number(match[2] ?? 0) * 60 + Number(match[3] ?? 0)
+}
+
+export interface GeminiErrorInfo {
+  // Vale tentar de novo agora (sobrecarga passageira)?
+  retryable: boolean
+  // Acabou a cota (limite de pedidos do plano)?
+  quota: boolean
+  retryAfterSeconds: number | null
+}
+
+// Sobrecarga (503) e falha interna (500/504) passam sozinhas: tentamos de novo. Erro 429 de COTA
+// (plano gratuito: poucos pedidos por dia) só passa quando o Google diz que passou, e isso pode levar
+// horas: tentar de novo agora só gasta tempo. Só repetimos um 429 se o Google pedir poucos segundos.
+export function classifyGeminiError(error: unknown): GeminiErrorInfo {
+  if (!(error instanceof ApiError)) return { retryable: false, quota: false, retryAfterSeconds: null }
+  const retryAfterSeconds = parseRetryDelay(error.message)
+  if (error.status === 429) {
+    return {
+      retryable: retryAfterSeconds !== null && retryAfterSeconds <= 10,
+      quota: /quota|RESOURCE_EXHAUSTED|free_tier/i.test(error.message),
+      retryAfterSeconds,
+    }
+  }
+  return { retryable: [500, 503, 504].includes(error.status), quota: false, retryAfterSeconds }
+}
+
+function formatWait(seconds: number) {
+  if (seconds >= 3600) return `${Math.floor(seconds / 3600)} h ${Math.round((seconds % 3600) / 60)} min`
+  if (seconds >= 60) return `${Math.round(seconds / 60)} min`
+  return `${Math.ceil(seconds)} s`
+}
+
+// Mensagem para a tela, conforme o tipo de falha.
+export function geminiFailureMessage(error: unknown) {
+  const info = classifyGeminiError(error)
+  if (info.quota) {
+    const when = info.retryAfterSeconds ? ` (deve liberar em cerca de ${formatWait(info.retryAfterSeconds)})` : ''
+    return `O limite de uso do Gemini foi atingido${when}. O plano gratuito permite poucos pedidos por dia; tente mais tarde ou ative o plano pago.`
+  }
+  if (info.retryable) return 'O Gemini está sobrecarregado neste momento. Tente de novo em alguns minutos.'
+  return 'O Gemini não conseguiu ler o documento agora. Tente de novo em instantes.'
 }
 
 function technicalDetail(error: unknown) {
@@ -58,6 +102,7 @@ export async function generateJsonFromPdf(options: {
   const data = Buffer.from(options.pdf.buffer, options.pdf.byteOffset, options.pdf.byteLength).toString('base64')
 
   let lastError: unknown = null
+  const tried: string[] = []
   for (let attempt = 0; attempt < models.length; attempt++) {
     const remaining = TOTAL_BUDGET_MS - (Date.now() - startedAt)
     if (remaining < 5_000) break
@@ -95,17 +140,16 @@ export async function generateJsonFromPdf(options: {
       }
     } catch (error) {
       lastError = error
+      tried.push(`${model}: ${error instanceof ApiError ? error.status : 'erro'}`)
       console.error(`Falha na chamada ao Gemini (tentativa ${attempt + 1}, modelo ${model}):`, error)
-      if (!isTemporary(error) || attempt === models.length - 1) break
+      if (!classifyGeminiError(error).retryable || attempt === models.length - 1) break
       await wait(RETRY_DELAYS_MS[attempt] ?? 4_000)
     }
   }
 
   return {
     ok: false,
-    error: isTemporary(lastError)
-      ? 'O Gemini está sobrecarregado neste momento. Tente de novo em alguns minutos.'
-      : 'O Gemini não conseguiu ler o documento agora. Tente de novo em instantes.',
-    detail: technicalDetail(lastError),
+    error: geminiFailureMessage(lastError),
+    detail: `${technicalDetail(lastError)} | Tentativas: ${tried.join(', ') || 'nenhuma'}`,
   }
 }
