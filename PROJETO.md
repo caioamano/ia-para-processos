@@ -126,8 +126,8 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 | 6 | Multi-tenancy (validação do isolamento com RLS) | **Concluída** (2º escritório; conferência SQL 35/35 ✅ e teste pelo site com os dois logins, em 09/10/2026) |
 | 7 | Cadastro de processos | **Concluída** (testada no site por Caio em 10/10/2026) |
 | 8 | Upload de documentos | **Concluída** (envio de PDF testado no site por Caio em 10/10/2026) |
-| 9 | Gemini (primeira função: **cadastrar o processo a partir do PDF**; depois análise) | **Em andamento** (9A e 9B concluídas; 9C, a tela "Preencher a partir de um PDF", entregue em 10/10/2026, aguardando teste no site) |
-| 10 | Análise de documentos | Pendente |
+| 9 | Gemini: cadastrar o processo a partir do PDF | **Concluída** (9A, 9B e 9C testadas no site em 10/10/2026) |
+| 10 | Análise de documentos | **Em andamento** (10A, o motor, entregue em 10/10/2026, aguardando teste; falta a 10B, botão e gravação) |
 | 11 | Perguntas sobre processos | Pendente |
 | 12 | Referências/páginas | Pendente |
 | 13 | Testes | Pendente |
@@ -139,7 +139,7 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 ## 7. Estado atual
 
-**Atualizado em: 10/10/2026 (Fases 1 a 8, 9A e 9B concluídas; Fase 9C entregue, aguardando teste)**
+**Atualizado em: 10/10/2026 (Fases 1 a 9 concluídas; Fase 10A entregue, aguardando teste)**
 
 - **Fase 5A (login) concluída.** Login por e-mail e senha, rotas protegidas por `proxy.ts`, botão Sair. Variáveis na Vercel: `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (só na Vercel, nunca no GitHub; sem elas o site responde 500 de propósito). O login de Caio está vinculado ao perfil `Caio Henrique` (Administrador, escritório Silva & Associados).
 - **Fase 5B concluída (08/10/2026).** Todas as telas do painel leem do Supabase, com o RLS filtrando pelo usuário logado: Processos, Processo individual, Documentos, Análises, Equipe, Configurações (nome do escritório), menu lateral e barra superior (usuário, função, escritório e data de hoje) e dashboard (processos recentes, 4 indicadores e próximos prazos). Todas as consultas ficam em `lib/data/queries.ts`. Testada e funcionando em produção (09/10/2026).
@@ -159,6 +159,8 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 - **Fase 9B (concluída; testada no site em 10/10/2026 com a petição fictícia: todos os campos vieram certos, 17 s, ~2.200 tokens de entrada):** leitura do PDF pelo Gemini, **sem tela e sem gravar nada no banco**. Arquivos: `lib/cnj.ts` (formato e dígito verificador do número CNJ, módulo 97), `lib/process-extraction.ts` (instruções ao Gemini, formato JSON da resposta e `normalizeExtraction`, que confere tudo e gera avisos), `lib/pdf-slice.ts` (em PDF grande manda só as primeiras 40 páginas, depois 15, depois 5, se o arquivo passar de 15 MB; a numeração das páginas não muda), `lib/gemini-extract.ts` (chama o Gemini com o PDF em linha, `temperature 0`, resposta em JSON, limite de 50 s) e a rota temporária `app/api/extracao-teste/route.ts` (só Administrador; lê o PDF mais recente do escritório ou `?documento=<id>`; **envia o PDF ao Gemini**, usar só documento fictício). Campos extraídos, cada um com página e trecho do documento: número do processo, vara/tribunal, nome da ação, tipo (sugestão entre Cível/Trabalhista/Empresarial/Tributário), valor da causa, data de distribuição, polo ativo e polo passivo. O Gemini devolve o texto como está escrito e o **código** converte (data, valor, número), nunca o Gemini. Descartado com aviso: número fora do formato CNJ, valor ou data ilegíveis, data futura, página inexistente no trecho lido. Só avisa, sem descartar: dígito verificador do CNJ errado; ano do número diferente do ano da distribuição. Quem é o cliente do escritório **não** sai do documento: o advogado escolhe o polo na 9C. **Primeiro teste (10/10/2026):** o Gemini devolveu 503 "high demand" (sobrecarga temporária do modelo, não bug nosso). Por isso a leitura tenta até 3 vezes (pausas de 2 s e 4 s, limite total de 52 s) e, se existir a variável opcional `GEMINI_FALLBACK_MODEL` na Vercel, a 3ª tentativa usa esse modelo reserva; a rota de teste mostra o campo `detalhe` com o motivo técnico. Usa `generateContent` (o mesmo caminho do teste da 9A); a documentação do Google já mostra a nova Interactions API e o modelo `gemini-3.8-flash`; trocar de modelo é só mudar `GEMINI_MODEL` na Vercel. O PDF fictício da petição (Marina x Construtora Horizonte) tem número CNJ inventado cujo dígito verificador **não confere**: o aviso é esperado nesse teste.
 
 - **Fase 9C (entregue em 10/10/2026, aguardando teste no site):** na tela **Novo processo** aparece o painel "Preencher a partir de um PDF" (o formulário manual continua igual). Fluxo: o navegador confere o arquivo (PDF, até 50 MB) e envia direto ao Storage em `<escritório>/rascunhos/<id>.pdf` (o processo ainda não existe; a regra do Storage olha só a 1ª pasta, então não precisou de SQL novo) → a ação `readDraftPdf` (`app/(app)/processos/novo/pdf-actions.ts`, só Administrador/Advogado, caminho montado com o escritório da **sessão**) baixa o rascunho, confere que é PDF e chama `extractProcessFromPdf` → `lib/process-prefill.ts` (`buildPrefill`) transforma o resultado em valores do formulário → o formulário nasce preenchido (`components/processes/new-process-flow.tsx` recria o formulário com `key`) com a etiqueta "Lido do PDF, p. N: «trecho»" embaixo de cada campo, os avisos no topo e o seletor "Quem é o seu cliente neste processo? (Autor/Réu)", que preenche Cliente e Parte contrária (o documento não diz quem é o cliente). Nomes todos em maiúsculas viram "Marina Teixeira Souza" / "Construtora Horizonte LTDA" (`prettyName`). Ao cadastrar, `createProcess` cria o processo e, se veio `draftId`, **copia** o rascunho para o caminho definitivo (`storage.copy`; não há regra de UPDATE no Storage, então não dá para `move`), registra o documento pelo `registerDocument` de sempre e apaga o rascunho. Se a anexação falhar, o processo fica criado e a página dele mostra o aviso `?pdf=erro` (enviar o PDF de novo pelo botão normal). Trocar de PDF ou falha na leitura apagam o rascunho anterior (melhor esforço). **Sobras possíveis:** se a pessoa fecha a aba antes de cadastrar, o rascunho fica no Storage sem uso; limpeza futura (apagar `rascunhos/` com mais de alguns dias). A tela avisa que o PDF é enviado ao Gemini. A ação roda com `maxDuration = 60` na página `/processos/novo`.
+
+- **Fase 10A (entregue em 10/10/2026, aguardando teste no site):** motor da análise de documentos, **sem gravar nada e sem botão** (isso é a 10B). O banco já tinha tudo (`analyses`, `analysis_items` com `section`, `label`, `value`, `source_document_id`, `source_page`; a tela de Análise já mostra os itens com "Fonte: documento — página N"; só Administrador/Advogado escrevem). Arquivos novos: `lib/document-analysis.ts` (seções Partes/Valores/Pedidos/Argumentos/Decisões/Prazos, instruções ao Gemini, formato JSON, `normalizeAnalysis`, `planAnalysisChunks`, `mergeAnalysisItems`), `lib/gemini-call.ts` (chamada genérica PDF → JSON com as mesmas tentativas e modelo reserva da 9B), `lib/gemini-analyze.ts` (`analyzePdfChunk`), `slicePdfPages` em `lib/pdf-slice.ts` e a rota temporária `app/api/analise-teste/route.ts` (só Administrador; `?documento=<id>&parte=<n>`; **envia o trecho ao Gemini**; apagar na 10B). Regras: o documento é lido em **partes de 20 páginas** (limite atual: **200 páginas**; a 10B chama uma parte por vez, com progresso, porque cada chamada precisa caber nos 60 s da Vercel); a página que o Gemini informa é relativa à parte e o código soma o começo dela; **item sem página válida é descartado** (regra de ouro: sempre fonte); seção desconhecida, item vazio e duplicado também; limites: título 80, conteúdo 400, trecho literal 200 caracteres, 40 itens por parte; o prompt proíbe opinião, avaliação de chances e conselho jurídico. Cada item guarda também um **trecho literal** (`quote`) do documento. Ainda **não** há coluna para ele no banco: a 10B adiciona `source_quote` (SQL `09`) para mostrar ao advogado e para a verificação de páginas da Fase 12. Fora do escopo da 10 (ideias): eventos da linha do tempo (`process_events`) e prazos (`deadlines`) gerados a partir do documento.
 
 ### Decisões tomadas
 
@@ -195,8 +197,9 @@ Mais branco e tons claros. Estilo: sóbrio, limpo, premium, empresarial. Poucas 
 
 ### Próximos passos
 
-1. **Fase 9C (teste):** subir os arquivos, esperar o deploy Ready; em Novo processo, escolher o PDF fictício, conferir os campos e as etiquetas de página, escolher Autor ou Réu como cliente, escolher o responsável, cadastrar; na página do processo conferir que o PDF apareceu em Documentos (e que o rascunho sumiu do Storage). Testar também: cadastro manual sem PDF, número repetido (erro no campo), PDF que não é processo, e a Marcela (outro escritório) não ver nada.
-2. Depois do teste da 9C: apagar `app/api/gemini-teste` e `app/api/extracao-teste` (rotas temporárias).
+0. **Fase 10A (teste):** subir os arquivos, esperar o deploy Ready e abrir `/api/analise-teste` logado como Administrador (analisa a 1ª parte do PDF mais recente). Conferir se os itens da petição fictícia batem com o documento e se cada página está certa.
+1. **(feito) Fase 9C (teste):** subir os arquivos, esperar o deploy Ready; em Novo processo, escolher o PDF fictício, conferir os campos e as etiquetas de página, escolher Autor ou Réu como cliente, escolher o responsável, cadastrar; na página do processo conferir que o PDF apareceu em Documentos (e que o rascunho sumiu do Storage). Testar também: cadastro manual sem PDF, número repetido (erro no campo), PDF que não é processo, e a Marcela (outro escritório) não ver nada.
+2. Apagar as rotas temporárias `app/api/gemini-teste` e `app/api/extracao-teste` (já podem sair; a 9C está concluída) e, depois da 10B, `app/api/analise-teste`.
 3. Limpeza (pode fazer a qualquer momento, não bloqueia nada): apagar `lib/mock-data.ts`, `lib/mock-team.ts`, `lib/mock-process-details.ts` e `components/landing/` (os três `mock` juntos).
 
 ---
@@ -214,6 +217,7 @@ app/
     layout.tsx
     dashboard/ processos/ processos/novo/ processos/[id]/ documentos/ analises/ equipe/ configuracoes/
   api/gemini-teste/route.ts  rota TEMPORÁRIA de teste da chave do Gemini (só Administrador); apagar depois da Fase 9
+  api/analise-teste/route.ts  rota TEMPORÁRIA de teste da análise (só Administrador; envia o trecho ao Gemini); apagar na 10B
   api/extracao-teste/route.ts  rota TEMPORÁRIA de teste da leitura do PDF (só Administrador; envia o PDF ao Gemini); apagar quando a 9C estiver pronta
 components/                componentes por área (dashboard, process, processes, team, layout, login, ui...)
 lib/
@@ -221,6 +225,9 @@ lib/
   supabase/server.ts       cliente do Supabase para o servidor (envia o login; o RLS filtra)
   supabase/proxy.ts        renova a sessão e decide quem entra (usado pelo proxy.ts)
   gemini.ts                conexão com o Gemini (só servidor; chave em GEMINI_API_KEY na Vercel)
+  document-analysis.ts     regras da análise: seções, instruções ao Gemini, conferência dos itens, divisão em partes de 20 páginas
+  gemini-call.ts           chamada genérica PDF -> JSON no Gemini, com tentativas e modelo reserva (só servidor)
+  gemini-analyze.ts        analisa uma parte do PDF e devolve itens conferidos (só servidor)
   process-prefill.ts       transforma a leitura do PDF em valores do formulário (nomes, valor, polos, caminho do rascunho)
   gemini-extract.ts        manda o PDF ao Gemini e devolve os campos já conferidos (só servidor)
   process-extraction.ts    instruções, formato da resposta e conferência dos campos (sem Gemini, sem banco)

@@ -39,3 +39,26 @@ export async function preparePdfForExtraction(bytes: Uint8Array, totalPages: num
   // Nem com poucas páginas coube: PDF pesado demais (provavelmente escaneado em alta resolução).
   return null
 }
+
+// Fase 10: devolve só as páginas de `startPage` até `startPage + count - 1` (1 = primeira página).
+// Se o intervalo cobre o PDF inteiro e ele cabe no pedido, devolve o próprio arquivo, sem recortar.
+// Devolve null se o recorte passar do limite de tamanho do pedido (PDF escaneado muito pesado).
+export async function slicePdfPages(
+  bytes: Uint8Array,
+  totalPages: number,
+  startPage: number,
+  count: number,
+): Promise<Uint8Array | null> {
+  const end = Math.min(startPage + count - 1, totalPages)
+  if (startPage === 1 && end === totalPages) return bytes.length <= MAX_INLINE_BYTES ? bytes : null
+
+  const source = await PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false })
+  const slice = await PDFDocument.create()
+  const pages = await slice.copyPages(
+    source,
+    Array.from({ length: end - startPage + 1 }, (_, index) => startPage - 1 + index),
+  )
+  for (const page of pages) slice.addPage(page)
+  const sliced = await slice.save()
+  return sliced.length <= MAX_INLINE_BYTES ? sliced : null
+}
