@@ -86,8 +86,11 @@ function technicalDetail(error: unknown) {
   return text.slice(0, 600)
 }
 
+// Um PDF (`pdf`) ou vários documentos (`documents`, cada um com um rótulo de texto antes do arquivo,
+// para o Gemini poder dizer de qual documento veio a informação).
 export async function generateJsonFromPdf(options: {
-  pdf: Uint8Array
+  pdf?: Uint8Array
+  documents?: Array<{ label: string; pdf: Uint8Array }>
   system: string
   prompt: string
   schema: unknown
@@ -99,7 +102,15 @@ export async function generateJsonFromPdf(options: {
   const fallback = geminiFallbackModel()
   const models = [primary, primary, fallback && fallback !== primary ? fallback : primary]
   const thinkingLevel = resolveThinkingLevel(options.thinkingLevel)
-  const data = Buffer.from(options.pdf.buffer, options.pdf.byteOffset, options.pdf.byteLength).toString('base64')
+  const toBase64 = (bytes: Uint8Array) => Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('base64')
+  const documents = options.documents ?? (options.pdf ? [{ label: '', pdf: options.pdf }] : [])
+  const parts = [
+    ...documents.flatMap((document) => [
+      ...(document.label ? [{ text: document.label }] : []),
+      { inlineData: { mimeType: 'application/pdf', data: toBase64(document.pdf) } },
+    ]),
+    { text: options.prompt },
+  ]
 
   let lastError: unknown = null
   const tried: string[] = []
@@ -114,7 +125,7 @@ export async function generateJsonFromPdf(options: {
         contents: [
           {
             role: 'user',
-            parts: [{ inlineData: { mimeType: 'application/pdf', data } }, { text: options.prompt }],
+            parts,
           },
         ],
         config: {

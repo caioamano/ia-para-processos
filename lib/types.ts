@@ -101,10 +101,21 @@ export interface AnalysisSection {
   items: AnalysisItem[]
 }
 
+// Uma fonte de uma resposta: de onde veio e o trecho literal do documento (quando existe).
+export interface ConversationSource {
+  source: SourceReference
+  quote: string | null
+}
+
 export interface ConversationTurn {
   question: string
   answer: string
+  // Primeira fonte (formato antigo, guardado desde as primeiras fases).
   source: SourceReference | null
+  // Todas as fontes (Fase 11). Vazio/ausente nas consultas antigas.
+  sources?: ConversationSource[]
+  // A resposta tinha fonte, mas o documento foi excluído depois.
+  sourceMissing?: boolean
 }
 
 // ---------- Telas de Documentos, Análises, Equipe ----------

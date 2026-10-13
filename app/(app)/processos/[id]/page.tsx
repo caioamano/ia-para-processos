@@ -104,7 +104,11 @@ export default async function ProcessPage({ params, searchParams }: ProcessPageP
             {
               id: 'consulta',
               label: 'Consulta',
-              content: <QueryPanel turns={conversation} />,
+              content: <QueryPanel
+                turns={conversation}
+                processId={currentProcess.id}
+                hasDocuments={documents.some((document) => document.hasFile)}
+              />,
             },
             {
               id: 'historico',

@@ -153,6 +153,7 @@ interface ConsultationRow {
   answer: string
   source_document_id: string | null
   source_page: number | null
+  sources: unknown
 }
 
 export interface ProcessPageData {
@@ -215,9 +216,10 @@ export const getProcessPage = cache(async (id: string): Promise<ProcessPageData 
       .maybeSingle(),
     supabase
       .from('consultations')
-      .select('question, answer, source_document_id, source_page')
+      .select('question, answer, source_document_id, source_page, sources')
       .eq('process_id', id)
-      .order('created_at', { ascending: true }),
+      // Mais recente primeiro: a pergunta que acabou de ser feita aparece no topo.
+      .order('created_at', { ascending: false }),
   ])
 
   if (processRes.error) fail('o processo', processRes.error)
@@ -272,11 +274,24 @@ export const getProcessPage = cache(async (id: string): Promise<ProcessPageData 
       description: event.description,
     })),
     analysis,
-    conversation: (consultationsRes.data as ConsultationRow[]).map((consultation) => ({
-      question: consultation.question,
-      answer: consultation.answer,
-      source: sourceOf(consultation.source_document_id, consultation.source_page),
-    })),
+    conversation: (consultationsRes.data as ConsultationRow[]).map((consultation) => {
+      // `sources` é jsonb: [{ documentId, page, quote }]. Fontes de documento excluído são descartadas.
+      const stored = Array.isArray(consultation.sources) ? (consultation.sources as Record<string, unknown>[]) : []
+      const sources = stored.flatMap((entry) => {
+        const source = sourceOf(
+          typeof entry.documentId === 'string' ? entry.documentId : null,
+          typeof entry.page === 'number' ? entry.page : null,
+        )
+        return source ? [{ source, quote: typeof entry.quote === 'string' ? entry.quote : null }] : []
+      })
+      return {
+        question: consultation.question,
+        answer: consultation.answer,
+        source: sourceOf(consultation.source_document_id, consultation.source_page),
+        sources,
+        sourceMissing: stored.length > 0 && sources.length === 0,
+      }
+    }),
   }
 })
 
