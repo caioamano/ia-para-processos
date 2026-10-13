@@ -49,7 +49,7 @@ SEÇÕES:
 - Partes: autores, réus, terceiros e advogados que aparecem (com a função de cada um). Só nomes e funções, sem CPF, CNPJ ou endereço.
 - Valores: valor da causa, valores pedidos, multas, indenizações, honorários, correções. Uma linha por valor, com o que ele representa.
 - Pedidos: cada pedido feito ao juiz, um por item, em ordem.
-- Argumentos: os principais fundamentos de fato e de direito (leis citadas, teses, alegações), um por item.
+- Argumentos: os fundamentos de fato e de direito do documento, um por item. Inclua SEMPRE cada base legal ou tese citada (por exemplo: aplicação do Código de Defesa do Consumidor, artigos de lei, súmulas, jurisprudência) e as alegações centrais sobre os fatos (atraso, descumprimento, prejuízo).
 - Decisões: decisões, despachos e sentenças do juiz, e o que determinaram (dispositivo).
 - Prazos: prazos e datas importantes que o documento menciona (citação, contestação, recurso, audiência, entrega etc.), com a data ou o número de dias.`
 
