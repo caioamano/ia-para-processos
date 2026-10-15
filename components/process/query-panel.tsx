@@ -41,6 +41,15 @@ export function QueryPanel({
                     <div key={`${item.source.document}-${item.source.page}-${sourceIndex}`}>
                       <SourceRef source={item.source} />
                       {item.quote && <p className="mt-1 text-xs italic leading-5 text-subtle">“{item.quote}”</p>}
+                      {item.check === 'verified' && <p className="mt-0.5 text-[11px] text-subtle">Trecho conferido no texto do documento.</p>}
+                      {item.check === 'corrected' && (
+                        <p className="mt-0.5 text-[11px] text-subtle">Trecho conferido no texto do documento (a página foi corrigida).</p>
+                      )}
+                      {item.check === 'unverifiable' && (
+                        <p className="mt-0.5 text-[11px] text-subtle">
+                          Não foi possível conferir este trecho automaticamente (o PDF não tem texto selecionável). Confira no documento.
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>

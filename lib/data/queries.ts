@@ -16,6 +16,7 @@ import type {
   AnalysisOverview,
   AnalysisSection,
   AnalysisStatus,
+  ConversationSource,
   ConversationTurn,
   CurrentUser,
   Deadline,
@@ -236,7 +237,7 @@ export const getProcessPage = cache(async (id: string): Promise<ProcessPageData 
   // Monta "Fonte: documento — página" quando o banco tem as duas informações.
   function sourceOf(documentId: string | null, page: number | null) {
     const document = documentId ? documentNames.get(documentId) : undefined
-    return document && page ? { document, page } : null
+    return document && documentId && page ? { document, page, documentId } : null
   }
 
   const details: ProcessDetails = {
@@ -282,7 +283,9 @@ export const getProcessPage = cache(async (id: string): Promise<ProcessPageData 
           typeof entry.documentId === 'string' ? entry.documentId : null,
           typeof entry.page === 'number' ? entry.page : null,
         )
-        return source ? [{ source, quote: typeof entry.quote === 'string' ? entry.quote : null }] : []
+        const check: ConversationSource['check'] =
+          entry.check === 'verified' || entry.check === 'corrected' || entry.check === 'unverifiable' ? entry.check : undefined
+        return source ? [{ source, quote: typeof entry.quote === 'string' ? entry.quote : null, check }] : []
       })
       return {
         question: consultation.question,

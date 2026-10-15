@@ -53,6 +53,8 @@ export interface Deadline {
 export interface SourceReference {
   document: string
   page: number
+  // Quando existe, a fonte vira um link que abre o PDF naquela página.
+  documentId?: string
 }
 
 export interface ProcessDetails {
@@ -105,6 +107,8 @@ export interface AnalysisSection {
 export interface ConversationSource {
   source: SourceReference
   quote: string | null
+  // Fase 12: conferência do trecho no texto do PDF. Ausente nas consultas antigas.
+  check?: 'verified' | 'corrected' | 'unverifiable'
 }
 
 export interface ConversationTurn {

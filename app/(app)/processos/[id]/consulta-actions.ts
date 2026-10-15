@@ -6,7 +6,8 @@ import { getSession } from '@/lib/data/queries'
 import { UUID_PATTERN } from '@/lib/documents'
 import { geminiConfigured } from '@/lib/gemini'
 import { answerFromDocuments } from '@/lib/gemini-qa'
-import { pickQaDocuments, QA_MAX_PAGES, validateQuestion, type QaStatus } from '@/lib/process-qa'
+import { extractPageTexts } from '@/lib/pdf-text'
+import { applyQuoteChecks, pickQaDocuments, QA_MAX_PAGES, validateQuestion, type QaStatus } from '@/lib/process-qa'
 import { createClient } from '@/lib/supabase/server'
 
 export type AskResult = { ok: true; status: QaStatus; skipped: string[] } | { ok: false; error: string }
@@ -67,16 +68,29 @@ export async function askAboutProcess(processId: string, questionText: string): 
   const result = await answerFromDocuments(loaded as NonNullable<(typeof loaded)[number]>[], validated.question)
   if (!result.ok) return { ok: false, error: result.error }
 
-  const first = result.answer.sources[0]
+  // Fase 12: confere cada trecho citado no texto do PDF (não gasta pedido do Gemini). Só os documentos citados.
+  let finalAnswer = result.answer
+  if (finalAnswer.status === 'answered') {
+    const cited = new Set(finalAnswer.sources.map((source) => source.documentId))
+    const textsByDocument = new Map<string, string[] | null>()
+    await Promise.all(
+      (loaded as NonNullable<(typeof loaded)[number]>[])
+        .filter((item) => cited.has(item.meta.id))
+        .map(async (item) => textsByDocument.set(item.meta.id, await extractPageTexts(item.bytes))),
+    )
+    finalAnswer = applyQuoteChecks(finalAnswer, textsByDocument)
+  }
+
+  const first = finalAnswer.sources[0]
   const { error: insertError } = await supabase.from('consultations').insert({
     office_id: session.office.id,
     process_id: processId,
     profile_id: session.user.id,
     question: validated.question,
-    answer: result.answer.answer,
+    answer: finalAnswer.answer,
     source_document_id: first?.documentId ?? null,
     source_page: first?.page ?? null,
-    sources: result.answer.sources,
+    sources: finalAnswer.sources,
   })
   if (insertError) {
     console.error('Falha ao gravar a consulta:', insertError.message)
@@ -84,5 +98,5 @@ export async function askAboutProcess(processId: string, questionText: string): 
   }
 
   revalidatePath(`/processos/${processId}`)
-  return { ok: true, status: result.answer.status, skipped: skipped.map((document) => document.name) }
+  return { ok: true, status: finalAnswer.status, skipped: skipped.map((document) => document.name) }
 }

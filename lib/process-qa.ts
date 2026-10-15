@@ -3,11 +3,13 @@
 // pedimos ao Gemini e (2) como CONFERIMOS a resposta. Regra de ouro do produto: resposta sem fonte
 // (documento + página) não é apresentada como resposta.
 
+import { checkQuote, type PageTexts, type QuoteCheck } from '@/lib/quote-check'
+
 export const QA_MAX_QUESTION = 500
 // Limites do que vai ao Gemini numa pergunta: documentos inteiros, até estes totais.
 export const QA_MAX_PAGES = 200
 export const QA_MAX_BYTES = 15 * 1024 * 1024
-const MAX_SOURCES = 5
+const MAX_SOURCES = 8
 const MAX_ANSWER = 1200
 const MAX_QUOTE = 200
 
@@ -55,7 +57,7 @@ REGRAS:
 2. Responda só com o que está escrito nos documentos. Não invente, não deduza além do texto e não use conhecimento externo. Se a informação não estiver nos documentos, found deve ser false.
 3. Não dê opinião, não avalie as chances do caso, não faça previsões e não recomende estratégia ou condutas. Se a pergunta pedir isso, found deve ser false e notFoundReason "opiniao". Se a pergunta não tiver relação com o processo, notFoundReason "fora_do_assunto". Se for sobre o processo mas a resposta não estiver nos documentos, notFoundReason "nao_consta". Quando found for true, notFoundReason deve ser "".
 4. Quando found for true, escreva em answer uma resposta curta e direta em português (1 a 4 frases, texto simples, sem markdown), com números, datas e nomes exatamente como nos documentos.
-5. Em sources liste de onde veio cada parte da resposta (no máximo 5): documentIndex (o número n do documento), page (o número da página do ARQUIVO PDF; a primeira página do arquivo é 1, mesmo que a numeração impressa seja outra) e quote (um trecho LITERAL do documento, até 150 caracteres, que comprova a informação). Toda resposta com found true precisa de pelo menos uma fonte.
+5. Em sources liste de onde veio cada parte da resposta (no máximo 8). Se a resposta reunir vários itens (por exemplo, uma lista de pedidos, valores ou datas), traga UMA fonte para cada item, cada uma com o trecho que comprova aquele item: documentIndex (o número n do documento), page (o número da página do ARQUIVO PDF; a primeira página do arquivo é 1, mesmo que a numeração impressa seja outra) e quote (um trecho LITERAL do documento, até 150 caracteres, que comprova a informação). Toda resposta com found true precisa de pelo menos uma fonte.
 6. Quando found for false, answer deve ser "" e sources deve ser uma lista vazia.`
 
 export const QA_RESPONSE_SCHEMA = {
@@ -94,6 +96,8 @@ export interface QaSource {
   documentId: string
   page: number
   quote: string | null
+  // Fase 12: resultado da conferência do trecho no texto do PDF. Ausente nas consultas antigas.
+  check?: QuoteCheck
 }
 
 export type QaStatus = 'answered' | 'not_found' | 'unverified'
@@ -113,7 +117,7 @@ const NOT_FOUND_TEXT: Record<string, string> = {
 }
 
 const UNVERIFIED_TEXT =
-  'Encontrei uma possível resposta, mas não consegui confirmar a página de origem, então não vou apresentá-la. Reformule a pergunta ou confira os documentos.'
+  'Encontrei uma possível resposta, mas não consegui confirmar o trecho de origem no documento, então não vou apresentá-la. Reformule a pergunta ou confira os documentos.'
 
 function cut(text: string, max: number) {
   return text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`
@@ -154,4 +158,29 @@ export function normalizeAnswer(raw: unknown, included: Pick<QaDocument, 'id' | 
   // Sem texto ou sem nenhuma fonte válida: não apresenta a resposta (regra de ouro).
   if (answer === '' || sources.length === 0) return { status: 'unverified', answer: UNVERIFIED_TEXT, sources: [] }
   return { status: 'answered', answer: cut(answer, MAX_ANSWER), sources }
+}
+
+// Fase 12: confere cada fonte no TEXTO do PDF. `textsByDocument` traz, por documento, o texto de cada página
+// (ou null se não foi possível extrair). Regras: trecho achado na página citada = confirmado; achado em outra
+// página do mesmo documento = a página é corrigida; PDF sem texto = a fonte fica, marcada como "não foi
+// possível conferir"; trecho não achado em lugar nenhum = a fonte é descartada. Se não sobrar nenhuma fonte,
+// a resposta deixa de ser apresentada (mesma regra de ouro da Fase 11).
+export function applyQuoteChecks(answer: QaAnswer, textsByDocument: Map<string, PageTexts | null>): QaAnswer {
+  if (answer.status !== 'answered') return answer
+
+  const sources: QaSource[] = []
+  const seen = new Set<string>()
+  for (const source of answer.sources) {
+    const pages = textsByDocument.get(source.documentId)
+    const result = pages ? checkQuote(source.quote, source.page, pages) : { check: 'unverifiable' as const, page: source.page }
+    if (result.check === 'unconfirmed') continue
+
+    const key = `${source.documentId}|${result.page}|${source.quote ?? ''}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    sources.push({ ...source, page: result.page, check: result.check })
+  }
+
+  if (sources.length === 0) return { status: 'unverified', answer: UNVERIFIED_TEXT, sources: [] }
+  return { ...answer, sources }
 }

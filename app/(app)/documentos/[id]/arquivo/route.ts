@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 // Abre o PDF de um documento. Fluxo: confere o login, confere que o documento é do escritório
 // da pessoa (o RLS esconde os de outros), gera um link temporário (60 segundos) do Storage e
 // redireciona para ele. O caminho do arquivo nunca aparece na tela.
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const notFound = () => new NextResponse('Documento não encontrado.', { status: 404 })
 
@@ -23,7 +23,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     .createSignedUrl(document.storage_path, 60)
   if (signError || !signed) return notFound()
 
-  const response = NextResponse.redirect(signed.signedUrl)
+  // ?pagina=N abre o PDF direto na página N (o leitor de PDF do navegador entende #page=N).
+  const pageParam = new URL(request.url).searchParams.get('pagina')
+  const page = pageParam && /^\d{1,5}$/.test(pageParam) && Number(pageParam) >= 1 ? Number(pageParam) : null
+  const response = NextResponse.redirect(page ? `${signed.signedUrl}#page=${page}` : signed.signedUrl)
   response.headers.set('Cache-Control', 'no-store')
   return response
 }
